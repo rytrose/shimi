@@ -1,0 +1,32 @@
+byte cmd[] = {
+  0xff, 0xff, 0, 0x07, 0x03, 0x1e, 0, 0, 0, 0, 0};
+
+void mx28_init()
+{
+  Serial1.begin(57600);  
+  bitClear(UCSR1B, RXCIE1);    // disable receive interrupt
+  bitClear(UCSR1B, RXEN1);     // disable receive
+  bitSet(UCSR1B, TXEN1);       // enable transmission
+}
+
+void mx28_setPosVel(byte id, int pos, int vel)
+{
+  byte checksum = 0;
+  cmd[2] = id;  checksum+= id;
+  checksum += 0x07;
+  checksum += 0x03;
+  checksum+= 0x1e;
+  cmd[6] = lowByte(pos);  checksum += lowByte(pos);
+  cmd[7] = highByte(pos);  checksum+= highByte(pos);
+  cmd[8] = lowByte(vel);  checksum += lowByte(vel);
+  cmd[9] = highByte(vel);  checksum+= highByte(vel);
+  cmd[10] = (~checksum);
+  Serial.print("Sent "); 
+  for (int i=0; i<11; i++)
+  {
+    Serial.print(cmd[i],HEX);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial1.write(cmd,11);
+}

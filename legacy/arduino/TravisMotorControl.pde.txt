@@ -1,0 +1,71 @@
+#include <Max3421e.h>
+#include <Usb.h>
+#include <AndroidAccessory.h>
+
+AndroidAccessory acc("milab @ IDC Herzliya",
+"Travis",
+"Travis Dev Board",
+"3.2",
+"http://milab.idc.ac.il/travis",
+"0000000012345678");
+
+void setup()
+{
+  Serial.begin(115200);
+  Serial.print("\r\nStart\n");
+  mx28_init();
+  
+  startMotors();
+  acc.powerOn();
+}
+
+void loop()
+{
+  static byte count = 0;
+  byte incomingData[10] = {0,0,0,0,0,0,0,0,0,0};
+  
+  if (acc.isConnected()) {
+    int len = acc.read(incomingData, sizeof(incomingData), 1);
+    int vel = 0;
+    int pos = 0;
+    if (len > 0) {
+      // assumes only one command per packet
+        if (incomingData[0] == 0) {
+
+          int currentMotor = (incomingData[1]);
+          
+          // Get motor position
+          int res = incomingData[2];
+          res += incomingData[3];
+          res += incomingData[4];
+          res += incomingData[5];          
+          res *= 4;
+          pos = res;
+
+          res = 0;
+          // Get velocity
+          res = incomingData[6];
+          res += incomingData[7];
+          res += incomingData[8];
+          res += incomingData[9];
+          vel = res;
+          // Print position
+          Serial.print("\nPosition: ");          
+          Serial.print(pos);
+          // Print velocity
+          Serial.print("\nVelocity: ");        
+          Serial.println(vel);
+          mx28_setPosVel(currentMotor, pos, vel);
+        } 
+      }
+   }
+}
+
+void startMotors()
+{
+  mx28_setPosVel(1, 2047, 50);
+  mx28_setPosVel(2, 2047, 50);
+  mx28_setPosVel(3, 2047, 50);
+  mx28_setPosVel(4, 2047, 50);
+  mx28_setPosVel(5, 1592, 50);
+}
