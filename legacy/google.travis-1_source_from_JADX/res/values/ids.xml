@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="id" name="progressBar1">false</item>
+    <item type="id" name="textView1">false</item>
+    <item type="id" name="dance">false</item>
+    <item type="id" name="stopButton">false</item>
+    <item type="id" name="title_paired_devices">false</item>
+    <item type="id" name="paired_devices">false</item>
+    <item type="id" name="nowplaying">false</item>
+    <item type="id" name="song1">false</item>
+    <item type="id" name="song19">false</item>
+    <item type="id" name="stopAll">false</item>
+    <item type="id" name="status">false</item>
+</resources>

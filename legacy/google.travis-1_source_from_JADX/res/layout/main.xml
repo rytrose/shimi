@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView android:id="@id/nowplaying" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="Now Playing" />
+    <Button android:id="@id/song1" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="Song 1" />
+    <Button android:id="@id/song19" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="Song 19" />
+    <Button android:id="@id/stopAll" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="Stop!" />
+    <TextView android:id="@id/status" android:layout_width="fill_parent" android:layout_height="wrap_content" />
+</LinearLayout>

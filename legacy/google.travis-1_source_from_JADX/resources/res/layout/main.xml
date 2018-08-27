@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
+    <TextView android:id="@+id/nowplaying" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Now Playing"/>
+    <Button android:id="@+id/song1" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Song 1"/>
+    <Button android:id="@+id/song19" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Song 19"/>
+    <Button android:id="@+id/stopAll" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Stop!"/>
+    <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>

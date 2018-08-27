@@ -1,0 +1,378 @@
+Manifest-Version: 1.0
+Created-By: 1.0 (Android)
+
+Name: lib/x86/libpique.so
+SHA1-Digest: LXZggTwpW/+IQftJ2xRNJiDJHWE=
+
+Name: res/layout/device_list.xml
+SHA1-Digest: 2YxOrqyGDAKU07YX7BuC5yL0oac=
+
+Name: lib/armeabi-v7a/libpd.so
+SHA1-Digest: 3dxDx26tiZOt9e43pkmgRGdEe18=
+
+Name: lib/armeabi-v7a/libfiddle_tilde.so
+SHA1-Digest: h3tta+VNC84PAGxFRE9TEiuzX4s=
+
+Name: lib/x86/libfexpr_tilde.so
+SHA1-Digest: C5t+z+fnU4FnM9uKuMoQOUuqv0w=
+
+Name: res/raw/vibraslap1.wav
+SHA1-Digest: 0U6dwGLVZW02qrOV5OgAbph80kI=
+
+Name: lib/armeabi-v7a/libfexpr_tilde.so
+SHA1-Digest: fnqgJd85Tnp2RjTv50ST1fptelk=
+
+Name: res/raw/bell61.wav
+SHA1-Digest: Q/FBXTntAkaIzzVAwsHr6UB7oDo=
+
+Name: res/raw/bell63.wav
+SHA1-Digest: KoCRr+Jx7PDPCt6LXXQJnahhGVE=
+
+Name: res/raw/dtsample4.wav
+SHA1-Digest: pFrBgCWejFsH4laVikriF1czgIM=
+
+Name: lib/x86/libfiddle_tilde.so
+SHA1-Digest: agQhNMLvmvqZS+VW9wU+dThjxJg=
+
+Name: res/raw/cutesamplelong.wav
+SHA1-Digest: ajSaWJmAMKBOd9HSSreh7rThTyQ=
+
+Name: res/raw/pink_old.wav
+SHA1-Digest: JFWt6iV0eZQFWEa3EMZfIP/kuyU=
+
+Name: res/raw/bass39.wav
+SHA1-Digest: JkWtpeDl72lYoc8cL1/vmyvYhbA=
+
+Name: lib/armeabi-v7a/libloop_tilde.so
+SHA1-Digest: ATIfgzuAwxuVazsI3a7McCCR1Uo=
+
+Name: res/raw/melody73.wav
+SHA1-Digest: 5IBbV4Fmd9RGrB2uQl+G0yFAtm4=
+
+Name: res/raw/melody72.wav
+SHA1-Digest: mF559yz6fyAVW9mbBCvJVips2mc=
+
+Name: lib/x86/liblrshift_tilde.so
+SHA1-Digest: abGOrB03LRONQGFMdiga9OOsOUs=
+
+Name: lib/armeabi/liblrshift_tilde.so
+SHA1-Digest: imT0qpi1wPZJiPuqiaF9qfrwrPk=
+
+Name: lib/armeabi-v7a/libpdnativeopensl.so
+SHA1-Digest: GL2ioTgugAZSjQZ2qDI6UDl2ieI=
+
+Name: res/raw/melody64.wav
+SHA1-Digest: 865BqL/B3MpGekEoMOCUKXS5B4k=
+
+Name: res/raw/tambourine.wav
+SHA1-Digest: 3ORkHwQHCVT/sqweBzlIuw1OR3o=
+
+Name: res/raw/ebass37.wav
+SHA1-Digest: eWQsSsxwTPusxDUaabSgHWfPwjY=
+
+Name: res/raw/bellpart.wav
+SHA1-Digest: 1AoCyx5o23ydzKtwMw4XbpUlCBs=
+
+Name: res/raw/cutesample1.wav
+SHA1-Digest: cPqKu+Tnvy+XOaCwWSXfTEX15Xs=
+
+Name: lib/armeabi-v7a/libpique.so
+SHA1-Digest: zqVRrFDwn+5LZ4P5hiKQRpd3v2o=
+
+Name: res/raw/vibraslap.wav
+SHA1-Digest: cto/WoBSXIMML5l0TXiMVZS+ARM=
+
+Name: lib/armeabi/libbonk_tilde.so
+SHA1-Digest: JkCQBd6MnjEQ+iNH9mi5ASU4bmQ=
+
+Name: lib/armeabi/libexpr.so
+SHA1-Digest: NLcP0H7L+yfaGM3i5FpjoAlAbAM=
+
+Name: lib/armeabi/libloop_tilde.so
+SHA1-Digest: AHCizUKe9H1UwRO+NYUYhyaTOyI=
+
+Name: res/raw/audiogeneration.pd
+SHA1-Digest: uy2oFyw/Pe8TKDKu4OXqOPbFnOE=
+
+Name: lib/armeabi-v7a/libchoice.so
+SHA1-Digest: UTwW5GmFGDgoOY6If6W2obVGMtg=
+
+Name: res/drawable/din5.png
+SHA1-Digest: WNTv9chLCegVRMCVdboa+PfHNXA=
+
+Name: res/raw/bass43.wav
+SHA1-Digest: 2jPmeKmlc8mp8pW61aYQgV8iAk8=
+
+Name: resources.arsc
+SHA1-Digest: 1WfuqDEINedzolXFx6EuoY5LwHg=
+
+Name: lib/armeabi/libpique.so
+SHA1-Digest: +Es+H7/x4U4xp94LgE3oQcyE72I=
+
+Name: res/raw/newsample2.wav
+SHA1-Digest: yh+8Ur/AgBB3Opx4lb9zVXQaRdA=
+
+Name: AndroidManifest.xml
+SHA1-Digest: X3SjYszaQkBqO8HrLX/nOCpLvsc=
+
+Name: lib/x86/libexpr.so
+SHA1-Digest: C5t+z+fnU4FnM9uKuMoQOUuqv0w=
+
+Name: res/raw/bell64.wav
+SHA1-Digest: 7inlJtOa3FJqRt3QFNfxtQRykLY=
+
+Name: res/layout/behavior_choice.xml
+SHA1-Digest: l6+O4yKnzEPk+pDuFnv5Yjj2U+E=
+
+Name: res/raw/pbvibraslap.wav
+SHA1-Digest: 41OyDBnHAR7dy4u47X5pdsxFyIk=
+
+Name: lib/armeabi/libexpr_tilde.so
+SHA1-Digest: NLcP0H7L+yfaGM3i5FpjoAlAbAM=
+
+Name: res/raw/dtsample3.wav
+SHA1-Digest: GdcPPOzxoH3J/n/i1JMEQVWUR6w=
+
+Name: lib/x86/libbonk_tilde.so
+SHA1-Digest: mwFz/FmhM6OubOTGeZBshpyfLhw=
+
+Name: lib/x86/libchoice.so
+SHA1-Digest: +eMNAmhb0EqRQReDngOZrzFlFKg=
+
+Name: res/raw/snare.wav
+SHA1-Digest: Yy3t9l/tr3r4fUuIHLSIXzROeg0=
+
+Name: mr1/robots/travis/motor_config.xml
+SHA1-Digest: B0KWMWhaaeheA3bsydxCPkycXkc=
+
+Name: lib/armeabi/libchoice.so
+SHA1-Digest: LDhryogImmojbWu7pKK34lT7ACA=
+
+Name: res/raw/floortom.wav
+SHA1-Digest: OIDnmkayPqLe32d2Ry3QitiT+Fc=
+
+Name: res/raw/newsample1.wav
+SHA1-Digest: I8WY/kNWVunbdRb94/r0JgFT568=
+
+Name: res/raw/sample3.wav
+SHA1-Digest: IEUWnpJKadP2zINcb3CNGleq+p0=
+
+Name: classes.dex
+SHA1-Digest: FX8ksLRfDDoZq66l8vuFNiU2jIg=
+
+Name: res/raw/extra_abs.zip
+SHA1-Digest: dPGPN0pbveeXV7TcsHD4+yRC6HA=
+
+Name: res/raw/vocoder.pd
+SHA1-Digest: kneVJLKKoTGB3DUSI4Go27DOfeI=
+
+Name: res/raw/silence.wav
+SHA1-Digest: hRyylqq7nzzbwhIezzlGAeykDrc=
+
+Name: res/drawable/icon.png
+SHA1-Digest: L1d+lYwZ65p2z/fJnsYPZ0CMgTM=
+
+Name: res/raw/cutesampleshort2.wav
+SHA1-Digest: 2zp0Pphr6iFtxoy2WtSyIQqWUOw=
+
+Name: lib/armeabi/libfiddle_tilde.so
+SHA1-Digest: /2faQTkxj0YYf/7p+j4Sy8L49lM=
+
+Name: res/raw/ebass41.wav
+SHA1-Digest: /Z4ujuyWKRgDi2XSkc3OxxUB0hE=
+
+Name: res/drawable-hdpi/bg.png
+SHA1-Digest: wQiPH4K8Qeo9lxLCte2qeN/T+RA=
+
+Name: mr1/robots/travis/perceptronEmotionFeatures.json
+SHA1-Digest: 8vxP22GxeWvhDob/6MQhhr9dD5o=
+
+Name: res/raw/bass37.wav
+SHA1-Digest: ED9mzIzK4Z4HbrUct2wWEr8uiMM=
+
+Name: lib/armeabi/libpdnativeopensl.so
+SHA1-Digest: QfFZqhGRNvqldEeIQF5ni1jiL2g=
+
+Name: res/raw/melody65.wav
+SHA1-Digest: zCmLmzL4h79QLY/Er2NCpGvkjuk=
+
+Name: res/xml/preferences.xml
+SHA1-Digest: qBPN9UtJTLAKA902UMiViA6kz3o=
+
+Name: res/raw/ebass43.wav
+SHA1-Digest: rjnLaTGEnbSY5ObBWf2lJQ3xzO4=
+
+Name: res/raw/bass44.wav
+SHA1-Digest: hg+I9Wa4b7VPNuruZsoHxoHIKlg=
+
+Name: lib/armeabi-v7a/libexpr.so
+SHA1-Digest: fnqgJd85Tnp2RjTv50ST1fptelk=
+
+Name: res/raw/ebass36.wav
+SHA1-Digest: 7lYRcFpWHy6HLFgFwO8PWxKnpsA=
+
+Name: res/raw/dtsample2.wav
+SHA1-Digest: gg8jBU+RHrstDyh8tVvoZmrnJ2g=
+
+Name: res/layout/device_name.xml
+SHA1-Digest: qsnkpkEB6X6bdQBzqZfjRejSqgA=
+
+Name: lib/armeabi-v7a/libpdnative.so
+SHA1-Digest: RDpbXulkSIt2ss9oSFrG/7SdwV0=
+
+Name: res/raw/externals.zip
+SHA1-Digest: oCiYnyp5KGCNHiZ3T5FAgKuXS4E=
+
+Name: res/raw/bell67.wav
+SHA1-Digest: e/0kJqzeB8y8pc9kTJmTxzH0sZ0=
+
+Name: lib/x86/libsigmund_tilde.so
+SHA1-Digest: w+qyQazh1aX/CKgxkrz/sqdwT3Q=
+
+Name: res/raw/audiogeneration2.pd
+SHA1-Digest: j5McR+Q2z0BfcvQpPKdTo4LKovE=
+
+Name: lib/x86/libloop_tilde.so
+SHA1-Digest: h3CdrPO0/UAoQZNjDBg+gSAFPkI=
+
+Name: lib/armeabi-v7a/libsigmund_tilde.so
+SHA1-Digest: Y3X22P9kkAZZDFfS3M6EDGeePf8=
+
+Name: mr1/robots/travis/emotionFeatures.json
+SHA1-Digest: EB0P3/nqrAfMv5DJnx1ksle7hO0=
+
+Name: lib/armeabi/libpd.so
+SHA1-Digest: HfPrmN1g3tj7RdKruBsOjg2tC1M=
+
+Name: res/xml/accessory_filter.xml
+SHA1-Digest: E0/wB/jc8JnKS6jJXe3nLy+XdjQ=
+
+Name: res/raw/bell68.wav
+SHA1-Digest: VhdjRPG26levqtvnsq3v7qY1Igg=
+
+Name: lib/armeabi-v7a/libexpr_tilde.so
+SHA1-Digest: fnqgJd85Tnp2RjTv50ST1fptelk=
+
+Name: lib/armeabi/libsigmund_tilde.so
+SHA1-Digest: vP11/8d0cyEGraTjuLy9W9ILahM=
+
+Name: res/raw/androidbeatclassification.pd
+SHA1-Digest: 3DhtkaBZwgWfOLhFShyTm/dg5EE=
+
+Name: lib/x86/libpdnativeopensl.so
+SHA1-Digest: 8CvljeQbsuKvrCf0yRK6zlfjFaA=
+
+Name: res/raw/melody60.wav
+SHA1-Digest: c5hh1f9PmK+osKvTGFor650TY5I=
+
+Name: res/raw/pbattack.wav
+SHA1-Digest: Jd2+RW9/ejlnjwAUzp0hM8I/EhA=
+
+Name: res/raw/audiogeneration2_old.pd
+SHA1-Digest: pJF1Am+rsrd9/ar+lDdE/atqbCo=
+
+Name: res/raw/pbsample1.wav
+SHA1-Digest: p3bIQC9avN3P+8623axa6wBpUNQ=
+
+Name: res/layout/main.xml
+SHA1-Digest: ZFuXXE9pLBoywd/fhpz/R2yacmo=
+
+Name: res/raw/pbtambourine.wav
+SHA1-Digest: rfFFa6Bk39TGLaVg4DtqoXRXfsY=
+
+Name: res/raw/pink.wav
+SHA1-Digest: KnBCDiOi9sy5NrmVnlI+XH5lczg=
+
+Name: res/raw/cutesample2.wav
+SHA1-Digest: yK72kG3u3hh5ay1AC6FwCRXqdPI=
+
+Name: res/raw/melody67.wav
+SHA1-Digest: qheRYb2fzZjNbv7y0xJ6jac+mFk=
+
+Name: res/raw/bass40.wav
+SHA1-Digest: R7aYPgKGMV4/BXLGAk9FNPpwwZ8=
+
+Name: res/raw/bell60.wav
+SHA1-Digest: wRtfrRHhjiwc4gcT7XuLMU3o/x4=
+
+Name: res/raw/tick.wav
+SHA1-Digest: 9yqoco1u8JXspNnAB44qJL58x5o=
+
+Name: lib/armeabi/libfexpr_tilde.so
+SHA1-Digest: NLcP0H7L+yfaGM3i5FpjoAlAbAM=
+
+Name: res/raw/ebass40.wav
+SHA1-Digest: MbSSs1duDcaIVw5PJr+bFw6w3bQ=
+
+Name: lib/x86/libpdnative.so
+SHA1-Digest: gi7pORpaa6GGeO3kk/rDj4epuMI=
+
+Name: lib/armeabi-v7a/liblrshift_tilde.so
+SHA1-Digest: xCIEOyHF0mg583nUWu/chZPoEtc=
+
+Name: lib/armeabi-v7a/libbonk_tilde.so
+SHA1-Digest: LX7yPbVm06LhYYANECX/6a2TA4o=
+
+Name: res/raw/bell65.wav
+SHA1-Digest: vFRpVBiQc96ZD3OGPSOTWnBDU/c=
+
+Name: res/raw/bass36.wav
+SHA1-Digest: 6/tm4fCxXHaEoceK2fgABmSlLdw=
+
+Name: lib/armeabi/libpdnative.so
+SHA1-Digest: hPms9tMWtzwItvKOpsrtlDonvnk=
+
+Name: res/raw/cutesampleshort1.wav
+SHA1-Digest: SoZ8K/ZprjJlkaqtNRSoPA3lArU=
+
+Name: res/raw/sample1.wav
+SHA1-Digest: sg2zUJoJTEpSSSKkPXAAnHkwa4Y=
+
+Name: res/raw/bass.wav
+SHA1-Digest: aq+QALndnTe/x+zIYEtqr3Kj9W0=
+
+Name: res/raw/sample2.wav
+SHA1-Digest: crFjAmpY+sL7cfnFdd82tpxy1OU=
+
+Name: res/raw/hightom.wav
+SHA1-Digest: kXB4UE6UPFJi2d56DaKorXQFbOs=
+
+Name: res/raw/melody68.wav
+SHA1-Digest: LH57HTzxOIAoLcMewZJ4ilLcBmk=
+
+Name: lib/x86/libpd.so
+SHA1-Digest: k96nV3YC/F3loedHDX9zCOOxPWc=
+
+Name: res/raw/ebass44.wav
+SHA1-Digest: BjEfMXfTA4y3TZp3rIgWxBYTCF8=
+
+Name: res/raw/cutesampleshort.wav
+SHA1-Digest: Pud2RmqZt54wx7YNLWUi07l1kbk=
+
+Name: res/raw/audiogeneration1.pd
+SHA1-Digest: xZDrtH+3fe8a8nngbFSJ0e0pJiY=
+
+Name: res/raw/attack.wav
+SHA1-Digest: fhM5b9TwceiIqloRU5vIR2adGZU=
+
+Name: res/raw/cutesample.wav
+SHA1-Digest: FpR3yLvsiXU4goNeW2V+HY0/io8=
+
+Name: res/raw/bass41.wav
+SHA1-Digest: gBkad0eT4aFH3BN7y1cSN0V06YU=
+
+Name: lib/x86/libexpr_tilde.so
+SHA1-Digest: C5t+z+fnU4FnM9uKuMoQOUuqv0w=
+
+Name: res/raw/ebass39.wav
+SHA1-Digest: orVwABITV0fMGziWgTEboEb0c+s=
+
+Name: res/raw/bassdrum.wav
+SHA1-Digest: 8ogQwc946N90h6xprsMIUrR2RO8=
+
+Name: res/raw/newsample4.wav
+SHA1-Digest: cLpHSUVh3nB2I5EaQbHXBIWb064=
+
+Name: res/drawable-hdpi/travisicon.png
+SHA1-Digest: qCkpWwnrm5DlneHbWM7peWWMwjY=
+

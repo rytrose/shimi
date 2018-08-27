@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Motors>
+	<Motor
+		name="NeckUD" 
+		id="1" 
+		zero="2047"
+		minPos="-0.76"  			
+		maxPos="0.087"
+		maxVel="0.64">
+	</Motor>
+	<Motor 
+		name="Leg" 
+		id="5" 
+		zero="2047"
+		minPos="0" 
+		maxPos="0.4"
+		maxVel="3.43">
+	</Motor>
+	<Motor 
+		name="Head" 
+		id="3" 
+		zero="2047"
+		minPos="-0.785" 
+		maxPos="0.087"
+		maxVel="3.23">
+	</Motor>
+	<Motor 
+		name="NeckRL" 
+		id="2" 
+		zero="1760"
+		minPos="-1.24" 
+		maxPos="1.24"
+		maxVel="3.23">
+	</Motor>
+	<Motor 
+		name="Hand" 
+		id="4" 
+		zero="1592"
+		minPos="-1.57" 
+		maxPos="0.82"
+		maxVel="3.23">
+	</Motor>
+</Motors>
