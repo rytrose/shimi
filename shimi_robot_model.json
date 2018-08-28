@@ -1,0 +1,16 @@
+{
+  "controllers": {
+    "shimi": {
+      "port": "/dev/tty.usbserial-AL03EM2N",
+      "attached_motors": ["torso", "phone", "foot"]
+    }
+  },
+  "motor_groups": {
+    "torso": ["m1", "m2", "m3"]
+  },
+  "motors": {
+    "m1": {
+
+    }
+  }
+}
