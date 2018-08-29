@@ -1,16 +1,51 @@
 {
   "controllers": {
     "shimi": {
-      "port": "/dev/tty.usbserial-AL03EM2N",
-      "attached_motors": ["torso", "phone", "foot"]
+      "port": "auto",
+      "attached_motors": ["torso", "phone", "foot"],
+      "sync_read": false
     }
   },
-  "motor_groups": {
-    "torso": ["m1", "m2", "m3"]
+  "motorgroups": {
+    "torso": ["m1", "m2", "m3"],
+    "phone": ["m4"],
+    "foot": ["m5"]
   },
   "motors": {
     "m1": {
-
+      "type": "MX-28",
+      "id": 1,
+      "angle_limit": [-99, 14.64],
+      "orientation": "direct",
+      "offset": 0.0
+    },
+    "m2": {
+      "type": "MX-28",
+      "id": 2,
+      "angle_limit": [-111.6, 68.4],
+      "orientation": "direct",
+      "offset": 0.0
+    },
+    "m3": {
+      "type": "MX-28",
+      "id": 3,
+      "angle_limit": [-50.4, 9.8],
+      "orientation": "direct",
+      "offset": 0.0
+    },
+    "m4": {
+      "type": "MX-28",
+      "id": 4,
+      "angle_limit": [-101.85, 168.13],
+      "orientation": "direct",
+      "offset": 0.0
+    },
+    "m5": {
+      "type": "MX-28",
+      "id": 5,
+      "angle_limit": [5.41, 21.14],
+      "orientation": "direct",
+      "offset": 0.0
     }
   }
 }
