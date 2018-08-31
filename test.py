@@ -13,13 +13,13 @@ angle_limits = {
 # def set_angle_limits(dxl_io):
 #     dxl_io.set_angle_limit(angle_limits)
 #
-# ports = pypot.dynamixel.get_available_ports()
+ports = pypot.dynamixel.get_available_ports()
 #
 # if not ports:
 #     raise IOError('no port found!')
 #
-# print('ports found', ports)
-#
+print('ports found', ports)
+
 # print('connecting on the first available port:', ports[0])
 # dxl_io = pypot.dynamixel.DxlIO(ports[0])
 #
@@ -29,22 +29,22 @@ angle_limits = {
 # for id in ids:
 #     print(dxl_io.get_control_table([id]))
 
-shimi = pypot.robot.from_json("shimi_robot_model.json")
-shimi.start_sync()
-time.sleep(2)
-
-for m in shimi.motors:
-    m.compliant = False
-
-time.sleep(0.03)
-
-shimi.goto_position({m.name: m.angle_limit[0] + 4 for m in shimi.motors}, 2)
-
-time.sleep(3)
-
-shimi.goto_position({m.name: m.angle_limit[1] - 4 for m in shimi.motors}, 2, control='minjerk')
-
-time.sleep(3)
+# shimi = pypot.robot.from_json("shimi_robot_model.json")
+# shimi.start_sync()
+# time.sleep(2)
+#
+# for m in shimi.motors:
+#     m.compliant = False
+#
+# time.sleep(0.03)
+#
+# shimi.goto_position({m.name: m.angle_limit[0] + 4 for m in shimi.motors}, 2)
+#
+# time.sleep(3)
+#
+# shimi.goto_position({m.name: m.angle_limit[1] - 4 for m in shimi.motors}, 2, control='minjerk')
+#
+# time.sleep(3)
 #
 # for m in shimi.motors:
 #     m.compliant = False
@@ -57,13 +57,13 @@ time.sleep(3)
 #
 # time.sleep(2)
 #
-for m in shimi.motors:
-    m.compliant = True
-
-time.sleep(2)
-
-shimi.stop_sync()
-time.sleep(0.1)
+# for m in shimi.motors:
+#     m.compliant = True
+#
+# time.sleep(2)
+#
+# shimi.stop_sync()
+# time.sleep(0.1)
 
 
 # set_angle_limits(dxl_io)
@@ -104,6 +104,14 @@ time.sleep(0.1)
 #     time.sleep(0.5)
 
 # dxl_io.disable_torque(ids)
+
+# starting_positions = {
+#     1: 10,
+#     2: 68.4 - 90,
+#     3: 0,
+#     4: -11.85,
+#     5: 5.41
+# }
 
 #     time.sleep(4)
 #     # id 1: torso, -99 down, 14.64 up
