@@ -20,14 +20,14 @@ ports = pypot.dynamixel.get_available_ports()
 #
 print('ports found', ports)
 
-# print('connecting on the first available port:', ports[0])
-# dxl_io = pypot.dynamixel.DxlIO(ports[0])
-#
-# ids = dxl_io.scan(range(10))
-# print('found:', ids)
-#
-# for id in ids:
-#     print(dxl_io.get_control_table([id]))
+print('connecting on the first available port:', ports[0])
+# dxl_io = pypot.dynamixel.DxlIO('/dev/ttyTHS2')
+dxl_io = pypot.dynamixel.DxlIO(ports[0])
+
+ids = dxl_io.scan(range(10))
+print('found:', ids)
+
+print(dxl_io.get_control_table([5]))
 
 # shimi = pypot.robot.from_json("shimi_robot_model.json")
 # shimi.start_sync()
