@@ -28,23 +28,23 @@ class Shimi():
 
     @property
     def torso(self):
-        return self.robot.motors[TORSO]
+        return self.robot.motors[TORSO - 1]
 
     @property
     def neck_ud(self):
-        return self.robot.motors[NECK_UD]
+        return self.robot.motors[NECK_UD - 1]
 
     @property
     def neck_lr(self):
-        return self.robot.motors[NECK_LR]
+        return self.robot.motors[NECK_LR - 1]
 
     @property
     def phone(self):
-        return self.robot.motors[PHONE]
+        return self.robot.motors[PHONE - 1]
 
     @property
     def foot(self):
-        return self.robot.motors[FOOT]
+        return self.robot.motors[FOOT - 1]
 
     @property
     def all_motors(self):
