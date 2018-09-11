@@ -27,7 +27,8 @@ dxl_io = pypot.dynamixel.DxlIO(ports[0])
 ids = dxl_io.scan(range(10))
 print('found:', ids)
 
-print(dxl_io.get_control_table([5]))
+print(dxl_io.get_control_table(ids))
+print(dxl_io.get_voltage_limit(ids))
 
 # shimi = pypot.robot.from_json("shimi_robot_model.json")
 # shimi.start_sync()

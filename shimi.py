@@ -1,4 +1,5 @@
 from config.definitions import *
+from primitives.safety import *
 import pypot.robot
 from pypot.primitive.move import MoveRecorder, MovePlayer
 import time
@@ -10,9 +11,17 @@ class Shimi():
         # Attempt to load robot model
         self.robot = pypot.robot.from_json(model_path)
 
-        # Set the motors to linear movement
+        # Set the motors to dummy movement
         for m in self.robot.motors:
-            m.goto_behavior = 'linear'
+            m.goto_behavior = 'dummy'
+
+        # Run temperature monitoring
+        self.robot.attach_primitive(TemperatureMonitor(self.robot), 'temperature_monitoring')
+        self.robot.temperature_monitoring.start()
+
+        # Run torque limiting
+        self.robot.attach_primitive(LimitTorque(self.robot), 'limit_torque')
+        self.robot.limit_torque.start()
 
         # Set motors to initial positions
         self.initial_position()
@@ -117,3 +126,4 @@ class Shimi():
                     longest = players[i]
 
             longest.wait_to_stop()
+
