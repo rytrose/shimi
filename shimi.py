@@ -47,10 +47,9 @@ class Shimi():
         for m in self.robot.motors:
             m.compliant = False
 
-        # Move to starting positions over 500ms
+        # Move to starting positions over 1000ms
         print("Setting motors to starting positions {0}".format(STARTING_POSITIONS))
-        self.robot.goto_position({m.name: STARTING_POSITIONS[m.id] for m in self.robot.motors}, 0.5)
-        time.sleep(0.5)
+        self.robot.goto_position({m.name: STARTING_POSITIONS[m.id] for m in self.robot.motors}, 1.0, wait=True)
 
     # Sets the motors to compliant so they can be moved by hand
     def make_compliant(self):
