@@ -1,4 +1,5 @@
 from config.definitions import *
+from motion.move import *
 import utils.utils as utils
 import numpy as np
 import pypot.dynamixel
@@ -7,15 +8,12 @@ from pprint import pprint
 
 class Shimi:
     # Constructor
-    def __init__(self, model_path):
+    def __init__(self):
         # Attempt to load robot model
-        self.robot = pypot.robot.from_json(model_path)
+        # self.robot = pypot.robot.from_json(model_path)
 
         # Setup serial connection to motors and get the controller
         self.controller = self.setup()
-
-        # Set motors to initial positions
-        self.initial_position()
 
         # Stores active movements
         self.active_moves = {
@@ -25,6 +23,9 @@ class Shimi:
             PHONE: None,
             FOOT: None
         }
+
+        # Set motors to initial positions
+        self.initial_position()
 
     # Establishes serial connection to motors
     def setup(self):
@@ -36,11 +37,11 @@ class Shimi:
         controller = pypot.dynamixel.DxlIO(ports[0])
 
         # Search for motors
-        ids = self.controller.scan(range(10))
+        ids = controller.scan(range(10))
         print('Found motors with the following IDs:', ids)
 
         # Current settings for found motors
-        pprint(dict(self.controller.get_control_table(ids)))
+        pprint(controller.get_control_table(ids))
 
         return controller
 
@@ -75,7 +76,19 @@ class Shimi:
 
         print("Setting motors to starting positions:")
         pprint(STARTING_POSITIONS)
-        self.robot.goto_position({m.name: STARTING_POSITIONS[m.id] for m in self.robot.motors}, 1.0, wait=True)
+        # self.robot.goto_position({m.name: STARTING_POSITIONS[m.id] for m in self.robot.motors}, 1.0, wait=True)
+        moves = []
+        for m in self.all_motors:
+            move = LinearAccelMove(self, m, STARTING_POSITIONS[m], 1.0)
+            moves.append(move)
+
+        # Start all the moves
+        for move in moves:
+            move.start()
+
+        # Wait for all the moves to finish
+        for move in moves:
+            move.join()
 
     # Turns off torque so they can be moved by hand
     def disable_torque(self):

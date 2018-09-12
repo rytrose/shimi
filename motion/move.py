@@ -28,11 +28,12 @@ class LinearAccelMove(StoppableThread):
 
     def teardown(self):
         # Remove self from active active_moves
-        self.shimi.active_moves[self.motor].remove(self)
+        self.shimi.active_moves[self.motor] = None
 
     def run(self):
         start_time = time.time()
-        starting_position = self.shimi.controller.get_present_position([self.motor])
+        starting_position = self.shimi.controller.get_present_position([self.motor])[0]
+        done = False
 
         # Convert normalized position to degrees
         if self.norm:
@@ -44,33 +45,47 @@ class LinearAccelMove(StoppableThread):
 
         # Set the goal position and initial speed of min_vel
         self.shimi.controller.set_moving_speed({self.motor: self.min_vel})
-        self.shimi.controller.set_goal_position({self.motor, self.pos})
+        self.shimi.controller.set_goal_position({self.motor: self.pos})
 
-        # Finish run method if this becomes False
-        while self.should_stop():
+        # Increment speed over time at freq
+        while time.time() <= start_time + self.dur and not self.should_stop():
             # On pause
             if self.should_pause():
+                # Capture moving speed
+                pause_speed = self.shimi.controller.get_moving_speed([self.motor])[0]
+
+                # Stop the movement
+                self.shimi.controller.set_goal_position(
+                    {self.motor: self.shimi.controller.get_present_position([self.motor])[0]})
+
                 # Capture what time in the path it paused at
                 elapsed = start_time - time.time()
+
+                print("Paused", self.motor)
 
                 # Update the "start time" so that when unpaused, it resumes at the same time
                 while self.should_pause():
                     start_time = time.time() - elapsed
 
-            # Increment speed over time at freq
-            while time.time() <= start_time + self.dur:
-                # Compute the relative position (0 - 1) in the path to goal position
-                rel_pos = abs(self.dur / 2 - (time.time() - start_time))
+                # Continue to goal
+                self.shimi.controller.set_goal_position({self.motor: self.pos})
+                self.shimi.controller.set_moving_speed({self.motor: pause_speed})
+                print("resuming")
 
-                # Calculate the velocity at this point in time, relative to the max_vel at position/2
-                vel = (max_vel * (2 * (1.0 - rel_pos / self.dur) - 1)) + self.min_vel
-                self.shimi.controller.set_moving_speed({self.motor, vel})
+            # Compute the relative position (0 - 1) in the path to goal position
+            rel_pos = abs(self.dur / 2 - (time.time() - start_time))
 
-                # Wait to update again
-                time.sleep(self.freq)
+            # Calculate the velocity at this point in time, relative to the max_vel at position/2
+            vel = (max_vel * (2 * (1.0 - rel_pos / self.dur) - 1)) + self.min_vel
+            self.shimi.controller.set_moving_speed({self.motor: vel})
+
+            # Wait to update again
+            time.sleep(self.freq)
+
+
 
         # Set goal position to current position, for the case of stopping mid-move
-        self.shimi.controller.set_goal_position({self.motor, self.shimi.controller.get_present_position([self.motor])})
+        # self.shimi.controller.set_goal_position({self.motor: self.shimi.controller.get_present_position([self.motor])[0]})
 
         print("Done moving. orig goal pos: {0} | pres pos: {1}".format(self.pos,
                                                                        self.shimi.controller.get_present_position(
