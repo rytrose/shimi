@@ -62,7 +62,7 @@ class LinearAccelMove(StoppableThread):
             # On pause
             if self.should_pause():
                 # Capture moving speed
-                pause_speed = self.shimi.controller.get_moving_speed([self.motor])[0]
+                pause_speed = abs(self.shimi.controller.get_present_speed([self.motor])[0])
 
                 # Stop the movement
                 self.shimi.controller.set_goal_position(
