@@ -70,7 +70,7 @@ class Shimi:
         return [TORSO, NECK_UD, NECK_LR, PHONE, FOOT]
 
     # Moves the motors to the initial position set in config/definitions
-    def initial_position(self):
+    def initial_position(self, move_style='linear'):
         # Make sure torque is enabled
         self.enable_torque()
 
@@ -79,7 +79,10 @@ class Shimi:
         # self.robot.goto_position({m.name: STARTING_POSITIONS[m.id] for m in self.robot.motors}, 1.0, wait=True)
         moves = []
         for m in self.all_motors:
-            move = LinearAccelMove(self, m, STARTING_POSITIONS[m], 1.0)
+            if move_style == 'linear_accel':
+                move = LinearAccelMove(self, m, STARTING_POSITIONS[m], 1.0)
+            else:
+                move = LinearMove(self, m, STARTING_POSITIONS[m], 1.0)
             moves.append(move)
 
         # Start all the moves
