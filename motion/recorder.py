@@ -3,6 +3,11 @@ from motion.move import *
 import numpy as np
 import time
 
+TIME_INDEX = 0
+POS_INDEX = 1
+ERROR = 0.001
+INTERP_FREQ = 0.1
+
 class Recorder():
     def __init__(self, shimi, motors, duration, wait_time=3.0):
         self.shimi = shimi
@@ -112,62 +117,71 @@ class Recorder():
         pos_matrix = np.array(self.positions)
         vel_matrix = np.array(self.velocities)
 
-        # Find the positions at which direction change happens, interpolated to 0.1s increments
+        # Make sure the initial moving speed isn't 0 (which means move-as-fast-as-possible)
+        for i, _ in enumerate(self.motors):
+            if vel_matrix[0,i] < 1.0:
+                vel_matrix[0,i] = 1.0
+
+        # Find the positions at which direction change happens, interpolated to INTERP_FREQ [s] increments
         times_positions = [[[], []] for m in self.motors]
         for i, _ in enumerate(self.motors):
             zero_pos = np.interp(0, self.timestamps, pos_matrix[:,i])
-            first_pos = np.interp(0.1, self.timestamps, pos_matrix[:,i])
+            first_pos = np.interp(INTERP_FREQ, self.timestamps, pos_matrix[:,i])
             if first_pos - zero_pos >= 0:
                 incr = True
             else:
                 incr = False
 
-            t = 0.2
+            t = 2 * INTERP_FREQ
             last_pos = first_pos
             while t < self.dur:
                 pos = np.interp(t, self.timestamps, pos_matrix[:,i])
                 if incr and last_pos - pos < 0:
-                    times_positions[i][0].append(t)
-                    times_positions[i][1].append(last_pos)
+                    times_positions[i][TIME_INDEX].append(t)
+                    times_positions[i][POS_INDEX].append(last_pos)
                     incr = not incr
                 if not incr and last_pos - pos > 0:
-                    times_positions[i][0].append(t)
-                    times_positions[i][1].append(last_pos)
+                    times_positions[i][TIME_INDEX].append(t)
+                    times_positions[i][POS_INDEX].append(last_pos)
                     incr = not incr
                 last_pos = pos
 
-                t += 0.1
+                t += INTERP_FREQ
 
-        print(times_positions)
+        # Add initial time (which should correspond to the first position change)
+        # Add final position (which should correspond to the last position change time)
+        for i, _ in enumerate(self.motors):
+            times_positions[i][TIME_INDEX].insert(0, 0.0)
+            times_positions[i][POS_INDEX].append(pos_matrix[-1,i])
 
         # Using the times and positions, and the captured speeds, set goal position on change and update speed
-        time_until_next_pos = [0.0 for m in self.motors]
-        last_move_time = [0.0 for m in self.motors]
         t = 0
         while t < self.dur:
+            # Measure the time it takes for updating in order to make the sleep time such that update occurs
+            #   as close to INTERP_FREQ as possible
+            compute_time = time.time()
+
+            # Queues for setting multiple values at the same time
             motor_pos_to_set = []
             pos_to_set = []
             motor_vel_to_set = []
             vel_to_set = []
+
             for i, m in enumerate(self.motors):
                 # Set a new goal pos if needed
-                if time_until_next_pos[i] <= 0.0:
+                if len(times_positions[i][TIME_INDEX]) > 0 and abs(times_positions[i][TIME_INDEX][0] - t) <= ERROR:
+                    # Note which motor needs to be moved
                     motor_pos_to_set.append(m)
 
-                    try:
-                        pos_to_set.append(times_positions[i][1].pop(0))
-                        new_move_time = times_positions[i][0].pop(0)
-                        time_until_next_pos[i] = new_move_time - last_move_time[i]
-                        last_move_time[i] = new_move_time
-                    except IndexError:
-                        print("No more positions for motor", m)
-                        time_until_next_pos[i] = 2 * self.dur
+                    # Add position to set queue
+                    pos_to_set.append(times_positions[i][POS_INDEX].pop(0))
+
+                    # Remove this position change time
+                    times_positions[i][TIME_INDEX].pop(0)
 
                 # Calculate velocity at this point
                 motor_vel_to_set.append(m)
                 vel_to_set.append(np.interp(t, self.timestamps, vel_matrix[:,i]))
-
-                time_until_next_pos[i] -= 0.1
 
             # Set speeds for all motors
             self.shimi.controller.set_moving_speed(dict(zip(motor_vel_to_set, vel_to_set)))
@@ -177,11 +191,9 @@ class Recorder():
                 print("Setting positions {}".format(dict(zip(motor_pos_to_set, pos_to_set))))
                 self.shimi.controller.set_goal_position(dict(zip(motor_pos_to_set, pos_to_set)))
 
-            # Sleep for 0.1s
-            time.sleep(0.1)
-            t += 0.1
-
-        print(time_until_next_pos)
+            # Sleep for INTERP_FREQ [s] minus compute time
+            time.sleep(INTERP_FREQ - (time.time() - compute_time))
+            t += INTERP_FREQ
 
     def plot(self, ax):
         t = np.linspace(0, self.dur, len(self.positions))
