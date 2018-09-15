@@ -1,0 +1,23 @@
+{
+  "name": "posenet",
+  "version": "1.0.0",
+  "description": "",
+  "main": "posenet.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tensorflow-models/posenet": "^0.2.2",
+    "@tensorflow/tfjs": "^0.13.0",
+    "@tensorflow/tfjs-node": "^0.1.17",
+    "canvas": "^2.0.0-alpha.14",
+    "dgram": "^1.0.1",
+    "node-fetch": "^2.2.0",
+    "node-webcam": "^0.4.4",
+    "opencv": "^6.0.0",
+    "osc-js": "^1.2.2",
+    "xhr2": "^0.1.4"
+  }
+}
