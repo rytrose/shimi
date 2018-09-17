@@ -12,7 +12,8 @@ let net;
 let socket;
 
 let setup = async function () {
-    net = await posenet.load();
+    let architecture = 0.50;
+    net = await posenet.load(architecture);
     socket = dgram.createSocket('udp4');
 };
 
@@ -31,21 +32,6 @@ async function singlePoseOutput(imageElement) {
 }
 
 let predict = async function () {
-    // // Get image
-    // let img_path = "https://i.imgur.com/GuAB8OE.jpg";
-    // let buffer = await fetch(img_path).then(res => res.buffer());
-    // let img = new Image();
-    // img.src = buffer;
-    //
-    // // Draw to canvas
-    // const canvas = createCanvas(img.width, img.height);
-    // canvas.getContext('2d').drawImage(img, 0, 0);
-    //
-    // // Get prediction
-    // let pose = await singlePoseOutput(canvas);
-    // let string = JSON.stringify(pose);
-    // send('/posenet', string);
-
     let camera;
     try {
         camera = new cv.VideoCapture(0);

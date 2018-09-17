@@ -210,3 +210,6 @@ class Recorder():
         ax.legend(self.motors)
         ax.set_xlabel('Time (in s)')
         ax.set_ylabel('Position (in degrees)')
+
+
+
