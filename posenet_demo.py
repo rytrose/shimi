@@ -5,7 +5,7 @@ from pythonosc import osc_server
 
 def posenet_receiver(addr, pose_string):
     pose = json.loads(pose_string)
-    pprint(pose)
+    print("received frame")
 
 dispatcher = dispatcher.Dispatcher()
 
