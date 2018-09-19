@@ -5,6 +5,7 @@ import time
 import subprocess
 import numpy as np
 from utils.utils import *
+from motion.playback import playback
 from pythonosc import dispatcher as osc_dispatcher
 from pythonosc import osc_server
 
@@ -164,6 +165,9 @@ class PoseNet:
                 self.recording_start = None
 
     def record(self, duration=5.0, wait=3.0):
+        # Erase previous recording if any
+        self.positions = []
+
         # Count down to recording
         waiting = wait
         while waiting > 0:
@@ -177,7 +181,7 @@ class PoseNet:
         self.recording_duration = duration
         self.recording_start = time.time()
 
-    def play(self):
+    def play(self, pos_ax=None, vel_ax=None):
         # If there was nothing recorded, return
         if len(self.positions) == 0:
             print("No recording to play.")
@@ -191,98 +195,8 @@ class PoseNet:
             for j, m in enumerate(self.motors):
                 pos_matrix[i, j] = denormalize(m, pos_matrix[i, j])
 
-        velocities = []
-
-        # Set initial velocities
-        velocities.append([0.1 for _ in range(len(self.motors))])
-
-        # Calculate all velocities except the initial velocity
-        for i in range(pos_matrix.shape[0] - 1):
-            vels = []
-            for j, _ in enumerate(self.motors):
-                print("pos1:", pos_matrix[i + 1, j], "pos0:", pos_matrix[i, j], "time1:", self.timestamps[i + 1], "time0:", self.timestamps[i])
-                vel = abs(pos_matrix[i + 1, j] - pos_matrix[i, j]) / (self.timestamps[i + 1] - self.timestamps[i])
-                vels.append(vel)
-            velocities.append(vels)
-
-        vel_matrix = np.array(velocities)
-
-
-        #########
-        # COPIED
-        #########
-        # Find the positions at which direction change happens, interpolated to INTERP_FREQ [s] increments
-        times_positions = [[[], []] for m in self.motors]
-        for i, _ in enumerate(self.motors):
-            zero_pos = np.interp(0, self.timestamps, pos_matrix[:, i])
-            first_pos = np.interp(INTERP_FREQ, self.timestamps, pos_matrix[:, i])
-            if first_pos - zero_pos >= 0:
-                incr = True
-            else:
-                incr = False
-
-            t = 2 * INTERP_FREQ
-            last_pos = first_pos
-            while t < self.recording_duration:
-                pos = np.interp(t, self.timestamps, pos_matrix[:, i])
-                if incr and last_pos - pos < 0:
-                    times_positions[i][TIME_INDEX].append(t)
-                    times_positions[i][POS_INDEX].append(last_pos)
-                    incr = not incr
-                if not incr and last_pos - pos > 0:
-                    times_positions[i][TIME_INDEX].append(t)
-                    times_positions[i][POS_INDEX].append(last_pos)
-                    incr = not incr
-                last_pos = pos
-
-                t += INTERP_FREQ
-
-        # Add initial time (which should correspond to the first position change)
-        # Add final position (which should correspond to the last position change time)
-        for i, _ in enumerate(self.motors):
-            times_positions[i][TIME_INDEX].insert(0, 0.0)
-            times_positions[i][POS_INDEX].append(pos_matrix[-1, i])
-
-        # Using the times and positions, and the captured speeds, set goal position on change and update speed
-        t = 0
-        while t < self.recording_duration:
-            # Measure the time it takes for updating in order to make the sleep time such that update occurs
-            #   as close to INTERP_FREQ as possible
-            compute_time = time.time()
-
-            # Queues for setting multiple values at the same time
-            motor_pos_to_set = []
-            pos_to_set = []
-            motor_vel_to_set = []
-            vel_to_set = []
-
-            for i, m in enumerate(self.motors):
-                # Set a new goal pos if needed
-                if len(times_positions[i][TIME_INDEX]) > 0 and abs(times_positions[i][TIME_INDEX][0] - t) <= ERROR:
-                    # Note which motor needs to be moved
-                    motor_pos_to_set.append(m)
-
-                    # Add position to set queue
-                    pos_to_set.append(times_positions[i][POS_INDEX].pop(0))
-
-                    # Remove this position change time
-                    times_positions[i][TIME_INDEX].pop(0)
-
-                # Calculate velocity at this point
-                motor_vel_to_set.append(m)
-                vel_to_set.append(np.interp(t, self.timestamps, vel_matrix[:, i]))
-
-            # Set speeds for all motors
-            self.shimi.controller.set_moving_speed(dict(zip(motor_vel_to_set, vel_to_set)))
-
-            # Set new goal positions for those that need it
-            if len(motor_pos_to_set) > 0:
-                print("Setting positions {}".format(dict(zip(motor_pos_to_set, pos_to_set))))
-                self.shimi.controller.set_goal_position(dict(zip(motor_pos_to_set, pos_to_set)))
-
-            # Sleep for INTERP_FREQ [s] minus compute time
-            time.sleep(INTERP_FREQ - (time.time() - compute_time))
-            t += INTERP_FREQ
+        # Playback
+        playback(self.shimi, self.motors, self.recording_duration, self.timestamps, pos_matrix, None, pos_ax, vel_ax)
 
     def start_posenet(self):
         print("Starting PoseNet...")
