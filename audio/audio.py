@@ -86,5 +86,13 @@ def play_outkast(shimi):
     foot_lin.start()
     torso.start()
 
+def play_opera(shimi):
+    # Load the song
+    opera = sa.WaveObject.from_wave_file('audio/opera.wav')
 
-    # play_obj.stop()
+    # Start playback
+    play_obj = opera.play()
+
+    time.sleep(5.0)
+
+    play_obj.stop()
