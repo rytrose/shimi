@@ -1,5 +1,6 @@
 import simpleaudio as sa
 from shimi import *
+from motion.recorder import *
 from motion.move import *
 import threading
 import time
@@ -90,9 +91,15 @@ def play_opera(shimi):
     # Load the song
     opera = sa.WaveObject.from_wave_file('audio/opera.wav')
 
+    r = load_recorder(shimi, "opera")
+
+    threading.Thread(target=r.play).start()
+
+    time.sleep(2.2)
+
     # Start playback
     play_obj = opera.play()
 
-    time.sleep(5.0)
+    time.sleep(12.0)
 
     play_obj.stop()

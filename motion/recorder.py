@@ -132,6 +132,9 @@ class Recorder():
         }
         pickle.dump(gesture, open("saved_gestures/" + str(name) + ".p", "wb"))
 
+    def trim(self, duration, end="front"):
+        pass
+
 def load_recorder(shimi, name):
     # Unpickle the gesture
     gesture = pickle.load(open("saved_gestures/" + str(name) + ".p", "rb"))
