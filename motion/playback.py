@@ -95,7 +95,7 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
     for move in moves:
         move.join()
 
-    # Make no speeds are 0.0 (which means move-as-fast-as-possible)
+    # Make sure no speeds are 0.0 (which means move-as-fast-as-possible)
     # Set to 1.0 degree per second, which is very slow, but won't cause jerkiness
     #   due to changing the goal position when velocity is 0.0
     np.place(vel_matrix, vel_matrix < 1.0, 1.0)
@@ -134,7 +134,7 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
 
     # Using the times and positions, and the captured speeds, set goal position on change and update speed
     t = 0
-    while t < duration:
+    while t <= duration:
         # Measure the time it takes for updating in order to make the sleep time such that update occurs
         #   as close to INTERP_FREQ as possible
         compute_time = time.time()

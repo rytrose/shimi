@@ -1,4 +1,5 @@
 from pypot.utils import StoppableThread
+import matplotlib.pyplot as plt
 from motion.move import *
 from motion.playback import *
 import numpy as np
@@ -128,7 +129,41 @@ class Recorder():
         pickle.dump(gesture, open("saved_gestures/" + str(name) + ".p", "wb"))
 
     def trim(self, duration, end="front"):
-        pass
+        # Make timestamps a numpy array to get new front more easily
+        times = np.array(self.timestamps)
+        if end == "front":
+            # Get the new front
+            new_front_index = (np.abs(times - duration)).argmin()
+            new_front_value = self.timestamps[new_front_index]
+
+            # Trim timestamps, positions, velocities
+            self.timestamps = self.timestamps[new_front_index:]
+            self.positions = self.positions[new_front_index:]
+            self.velocities = self.velocities[new_front_index:]
+
+            # Re-zero timestamps
+            for i, timestamp in enumerate(self.timestamps):
+                self.timestamps[i] = timestamp - new_front_value
+
+            # Shorten duration
+            self.duration = self.timestamps[-1]
+        else:
+            # Get new duration
+            new_duration = self.duration - duration
+
+            # Get the new back
+            new_back_index = (np.abs(times - new_duration)).argmin()
+
+            # Trim timestamps, positions, velocities
+            self.timestamps = self.timestamps[:new_back_index + 1]
+            self.positions = self.positions[:new_back_index + 1]
+            self.velocities = self.velocities[:new_back_index + 1]
+
+            # Shorten duration
+            self.duration = new_duration
+
+        # Plot new recorder
+        self.plot(plt.axes())
 
 def load_recorder(shimi, name):
     # Unpickle the gesture
