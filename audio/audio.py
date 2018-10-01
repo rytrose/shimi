@@ -91,7 +91,7 @@ def play_opera(shimi):
     # Load the song
     opera = sa.WaveObject.from_wave_file('audio/opera.wav')
 
-    r = load_recorder(shimi, "opera")
+    r = load_recorder(shimi, "opera3")
 
     threading.Thread(target=r.play).start()
 
@@ -100,6 +100,6 @@ def play_opera(shimi):
     # Start playback
     play_obj = opera.play()
 
-    time.sleep(12.0)
+    time.sleep(20.0)
 
     play_obj.stop()
