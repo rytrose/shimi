@@ -165,6 +165,29 @@ class Recorder():
         # Plot new recorder
         self.plot(plt.axes())
 
+    def add_recording(self, new_recording):
+        new_pos_matrix = np.array(new_recording.positions)
+        new_vel_matrix = np.array(new_recording.velocities)
+
+        # Add motor(s) to this recording
+        for m in new_recording.motors:
+            if m in self.motors:
+                # Don't allow recordings with the same motors
+                print("Unable to overwrite motor recording.")
+                return
+            else:
+                self.motors.append(m)
+
+        for i, _ in enumerate(new_recording.motors):
+            for j, t in enumerate(self.timestamps):
+                # Add positions and velocities from new recording based on the current recording's time stamps
+                pos = list(self.positions[j])
+                pos.append(np.interp(t, new_recording.timestamps, new_pos_matrix[:,i]))
+                self.positions[j] = tuple(pos)
+                vel = list(self.velocities[j])
+                vel.append(np.interp(t, new_recording.timestamps, new_vel_matrix[:,i]))
+                self.velocities[j] = tuple(vel)
+
 def load_recorder(shimi, name):
     # Unpickle the gesture
     gesture = pickle.load(open("saved_gestures/" + str(name) + ".p", "rb"))

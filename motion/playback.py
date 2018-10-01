@@ -166,7 +166,7 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
 
         # Set new goal positions for those that need it
         if len(motor_pos_to_set) > 0:
-            print("Setting positions {}".format(dict(zip(motor_pos_to_set, pos_to_set))))
+            # print("Setting positions {}".format(dict(zip(motor_pos_to_set, pos_to_set))))
             shimi.controller.set_goal_position(dict(zip(motor_pos_to_set, pos_to_set)))
 
         # Sleep for INTERP_FREQ [s] minus compute time

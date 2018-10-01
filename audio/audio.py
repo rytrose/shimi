@@ -91,15 +91,24 @@ def play_opera(shimi):
     # Load the song
     opera = sa.WaveObject.from_wave_file('audio/opera.wav')
 
-    r = load_recorder(shimi, "opera3")
+    # Load the movement
+    r = load_recorder(shimi, "opera")
 
-    threading.Thread(target=r.play).start()
+    # Start moving
+    move = threading.Thread(target=r.play)
+    move.start()
 
-    time.sleep(2.2)
+    # Allow for move to catch up
+    time.sleep(3.0)
 
     # Start playback
     play_obj = opera.play()
 
-    time.sleep(20.0)
+    # Wait for move to end
+    move.join()
 
+    # Stop playback
     play_obj.stop()
+
+    # Move back to initial position
+    shimi.initial_position()
