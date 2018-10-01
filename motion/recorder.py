@@ -2,6 +2,7 @@ from pypot.utils import StoppableThread
 import matplotlib.pyplot as plt
 from motion.move import *
 from motion.playback import *
+from utils.utils import countdown
 import numpy as np
 import time
 import pickle
@@ -44,12 +45,7 @@ class Recorder():
 
     def _record(self):
         # Count down to recording
-        waiting = self.wait
-        while waiting > 0:
-            print("{}...".format(waiting))
-            sleep_time = min(1.0, waiting)
-            waiting -= sleep_time
-            time.sleep(sleep_time)
+        countdown(self.wait)
 
         # Make the recording
         print("Recording...")

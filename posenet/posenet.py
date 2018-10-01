@@ -169,12 +169,7 @@ class PoseNet:
         self.positions = []
 
         # Count down to recording
-        waiting = wait
-        while waiting > 0:
-            print("{}...".format(waiting))
-            sleep_time = min(1.0, waiting)
-            waiting -= sleep_time
-            time.sleep(sleep_time)
+        countdown(wait)
 
         # Make the recording
         print("Recording...")

@@ -3,3 +3,4 @@
 *.zip
 node_modules/
 __pycache__/
+video_gestures/
