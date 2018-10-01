@@ -1,6 +1,7 @@
 from pypot.utils import StoppableThread
 import time
 import utils.utils as utils
+import random
 
 class LinearAccelMove(StoppableThread):
     def __init__(self, shimi, motor, position, duration, initial_delay=0.0, update_freq=0.1, min_vel=20, normalized_positions=False):
@@ -205,3 +206,120 @@ class LinearMove(StoppableThread):
         self.delays.append(delay)
         self.positions.append(position)
         self.durations.append(duration)
+
+class Thinking(StoppableThread):
+    def __init__(self, shimi):
+        # Seed RNG
+        random.seed()
+
+        self.shimi = shimi
+
+        self.UP_LEFT = 0
+        self.UP_RIGHT = 1
+        self.DOWN_LEFT = 2
+        self.DOWN_RIGHT = 3
+
+        self.state_positions = {
+            self.UP_LEFT: {
+                self.shimi.neck_ud: 0.75,
+                self.shimi.neck_lr: 0.3,
+                self.shimi.torso: 0.95
+            },
+            self.UP_RIGHT: {
+                self.shimi.neck_ud: 0.75,
+                self.shimi.neck_lr: 0.7,
+                self.shimi.torso: 0.9
+            },
+            self.DOWN_LEFT: {
+                self.shimi.neck_ud: 0.2,
+                self.shimi.neck_lr: 0.3,
+                self.shimi.torso: 0.95
+            },
+            self.DOWN_RIGHT: {
+                self.shimi.neck_ud: 0.2,
+                self.shimi.neck_lr: 0.7,
+                self.shimi.torso: 0.9
+            },
+
+        }
+
+        self.state = -1
+
+        StoppableThread.__init__(self,
+                                 setup=self.setup,
+                                 target=self.run,
+                                 teardown=self.teardown)
+
+    def run(self):
+        while not self.should_stop():
+            # Wait between states some
+            time.sleep(1.0 * random.random())
+
+            # Check for stop after sleeping
+            if self.should_stop():
+                break
+
+            # Change thinking position
+            # self.state = (self.state + 1) % 4
+            self.state = [0, 1, 2, 3][random.randrange(4)]
+
+            # Move to new state position
+            # Take between 1.0 - 1.6 seconds
+            duration = 1.3 + ([-1, 1][random.randrange(2)] * random.random() * 0.3)
+
+            moves = []
+            for motor, pos in self.state_positions[self.state].items():
+                # Define the move
+                move = LinearAccelMove(self.shimi, motor, pos, duration, normalized_positions=True)
+
+                # Start moving
+                move.start()
+
+                # Retain thread to join
+                moves.append(move)
+
+            # Wait for the moves to finish
+            for move in moves:
+                move.join()
+
+class No(StoppableThread):
+    def __init__(self, shimi):
+        self.shimi = shimi
+
+        StoppableThread.__init__(self,
+                                 setup=self.setup,
+                                 target=self.run,
+                                 teardown=self.teardown)
+
+    def run(self):
+        # Seed RNG
+        random.seed()
+
+        # Random speed for each movement
+        self.speed = 0.2 + random.random() / 2
+
+        # Set to initial position
+        self.shimi.initial_position(0.7)
+
+        # Random shake distance between 0.3 (large shake) and near-0 (very small shake)
+        self.dist = 0.3 - ((3 * random.random()) / 16)
+
+        # Random left right first shake
+        directions = [1, -1]
+
+        # Shake first direction
+        first_dir = directions.pop(random.randrange(2))
+        shake = LinearAccelMove(self.shimi, self.shimi.neck_lr, 0.5 + (first_dir * self.dist), self.speed,
+                        normalized_positions=True)
+
+        # Shake second direction
+        shake.add_move(0.5 + (directions.pop() * self.dist), self.speed / 2)
+
+        # Set back to middle
+        shake.add_move(0.5, self.speed)
+
+        # Move
+        shake.start()
+        shake.join()
+
+
