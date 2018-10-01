@@ -7,8 +7,7 @@ import time
 TIME_INDEX = 0
 POS_INDEX = 1
 ERROR = 0.00001
-INTERP_FREQ = 0.003
-
+INTERP_FREQ = 0.01
 
 def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax=None, vel_ax=None,
              use_pos_spl=True, use_vel_spl=False):
@@ -115,11 +114,11 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
         last_pos = first_pos
         while t < duration:
             pos = np.interp(t, timestamps, pos_matrix[:, i])
-            if increasing and last_pos - pos < 0:
+            if increasing and last_pos - pos < 0.009:
                 times_positions[i][TIME_INDEX].append(t)
                 times_positions[i][POS_INDEX].append(last_pos)
                 increasing = not increasing
-            if not increasing and last_pos - pos > 0:
+            if not increasing and last_pos - pos > 0.009:
                 times_positions[i][TIME_INDEX].append(t)
                 times_positions[i][POS_INDEX].append(last_pos)
                 increasing = not increasing

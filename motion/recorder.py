@@ -5,11 +5,6 @@ import numpy as np
 import time
 import pickle
 
-TIME_INDEX = 0
-POS_INDEX = 1
-ERROR = 0.0001
-INTERP_FREQ = 0.1
-
 class Recorder():
     def __init__(self, shimi, motors, duration, wait_time=3.0):
         self.shimi = shimi
