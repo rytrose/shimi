@@ -99,7 +99,7 @@ def play_opera(shimi):
     move.start()
 
     # Allow for move to catch up
-    time.sleep(3.0)
+    time.sleep(2.7)
 
     # Start playback
     play_obj = opera.play()
