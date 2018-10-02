@@ -7,6 +7,7 @@ import numpy as np
 import time
 import pickle
 
+
 class Recorder():
     def __init__(self, shimi, motors, duration, wait_time=3.0):
         self.shimi = shimi
@@ -67,8 +68,9 @@ class Recorder():
 
         print("Done. Recorded {0} positions and {1} velocities.".format(len(self.positions), len(self.velocities)))
 
-    def play(self, pos_ax=None, vel_ax=None):
-        playback(self.shimi, self.motors, self.duration, self.timestamps, self.positions, self.velocities, pos_ax, vel_ax)
+    def play(self, pos_ax=None, vel_ax=None, callback=None):
+        playback(self.shimi, self.motors, self.duration, self.timestamps, self.positions, self.velocities, pos_ax,
+                 vel_ax, callback=callback)
 
     def plot(self, ax):
         t = np.linspace(0, self.duration, len(self.positions))
@@ -76,7 +78,7 @@ class Recorder():
         pos_matrix = np.array(self.positions)
 
         for i, _ in enumerate(self.motors):
-            ax.plot(t, pos_matrix[:,i])
+            ax.plot(t, pos_matrix[:, i])
 
         ax.legend(self.motors)
         ax.set_xlabel('Time (in s)')
@@ -113,7 +115,7 @@ class Recorder():
 
         print("Recording appended.")
 
-    def save(self, name):
+    def save(self, name, path="saved_gestures"):
         # Save pickle of this object
         gesture = {
             "motors": self.motors,
@@ -122,7 +124,7 @@ class Recorder():
             "velocities": self.velocities,
             "timestamps": self.timestamps
         }
-        pickle.dump(gesture, open("saved_gestures/" + str(name) + ".p", "wb"))
+        pickle.dump(gesture, open(path + "/" + str(name) + ".p", "wb"))
 
     def trim(self, duration, end="front"):
         # Make timestamps a numpy array to get new front more easily
@@ -178,15 +180,16 @@ class Recorder():
             for j, t in enumerate(self.timestamps):
                 # Add positions and velocities from new recording based on the current recording's time stamps
                 pos = list(self.positions[j])
-                pos.append(np.interp(t, new_recording.timestamps, new_pos_matrix[:,i]))
+                pos.append(np.interp(t, new_recording.timestamps, new_pos_matrix[:, i]))
                 self.positions[j] = tuple(pos)
                 vel = list(self.velocities[j])
-                vel.append(np.interp(t, new_recording.timestamps, new_vel_matrix[:,i]))
+                vel.append(np.interp(t, new_recording.timestamps, new_vel_matrix[:, i]))
                 self.velocities[j] = tuple(vel)
 
-def load_recorder(shimi, name):
+
+def load_recorder(shimi, name, path="saved_gestures"):
     # Unpickle the gesture
-    gesture = pickle.load(open("saved_gestures/" + str(name) + ".p", "rb"))
+    gesture = pickle.load(open(path + "/" + str(name) + ".p", "rb"))
 
     # Recreate the recorder
     r = Recorder(shimi, gesture["motors"], gesture["duration"])

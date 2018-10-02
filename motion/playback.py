@@ -10,7 +10,7 @@ ERROR = 0.00001
 INTERP_FREQ = 0.01
 
 def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax=None, vel_ax=None,
-             use_pos_spl=True, use_vel_spl=False):
+             use_pos_spl=True, use_vel_spl=False, callback=None):
     # Ensure all inputs are np arrays
     if not isinstance(timestamps, np.ndarray):
         timestamps = np.array(timestamps)
@@ -131,6 +131,11 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
     for i, _ in enumerate(motors):
         times_positions[i][TIME_INDEX].insert(0, 0.0)
         times_positions[i][POS_INDEX].append(pos_matrix[-1, i])
+
+    # Use callback to alert start of playback
+    if callback:
+        print("Starting motion, calling back...")
+        callback()
 
     # Using the times and positions, and the captured speeds, set goal position on change and update speed
     t = 0

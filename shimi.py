@@ -8,12 +8,12 @@ from pprint import pprint
 
 class Shimi:
     # Constructor
-    def __init__(self):
+    def __init__(self, silent=False):
         # Attempt to load robot model
         # self.robot = pypot.robot.from_json(model_path)
 
         # Setup serial connection to motors and get the controller
-        self.controller = self.setup()
+        self.controller = self.setup(silent)
 
         # Stores active movements
         self.active_moves = {
@@ -28,20 +28,23 @@ class Shimi:
         self.initial_position()
 
     # Establishes serial connection to motors
-    def setup(self):
+    def setup(self, silent):
         # Find USB to serial converter
         ports = pypot.dynamixel.get_available_ports()
 
         # Connect to first port for now
-        print('Connecting on', ports[0])
+        if not silent:
+            print('Connecting on', ports[0])
         controller = pypot.dynamixel.DxlIO(ports[0])
 
         # Search for motors
         ids = controller.scan(range(10))
-        print('Found motors with the following IDs:', ids)
 
-        # Current settings for found motors
-        pprint(controller.get_control_table(ids))
+        if not silent:
+            print('Found motors with the following IDs:', ids)
+
+            # Current settings for found motors
+            pprint(controller.get_control_table(ids))
 
         return controller
 
@@ -74,8 +77,6 @@ class Shimi:
         # Make sure torque is enabled
         self.enable_torque()
 
-        print("Setting motors to starting positions:")
-        pprint(STARTING_POSITIONS)
         # self.robot.goto_position({m.name: STARTING_POSITIONS[m.id] for m in self.robot.motors}, 1.0, wait=True)
         moves = []
         for m in self.all_motors:
