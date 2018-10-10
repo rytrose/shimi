@@ -6,6 +6,8 @@ import numpy as np
 import os
 import yaml
 import sys
+from decode_single_pose import decode_single_pose
+from pprint import pprint
 
 f = open("config.yaml", "r+")
 cfg = yaml.load(f)
@@ -130,13 +132,13 @@ rate = [1, 1]
 buff = []
 with tf.variable_scope(None, 'MobilenetV1'):
     for m in layers:
-        strinde = [1, m['stride'], m['stride'], 1]
+        stride = [1, m['stride'], m['stride'], 1]
         rate = [m['rate'], m['rate']]
         if (m['convType'] == "conv2d"):
-            x = conv(x, strinde, m['blockId'])
+            x = conv(x, stride, m['blockId'])
             buff.append(x)
         elif (m['convType'] == "separableConv"):
-            x = separableConv(x, strinde, m['blockId'], rate)
+            x = separableConv(x, stride, m['blockId'], rate)
             buff.append(x)
 
 heatmaps = convToOutput(x, 'heatmap_2')
@@ -150,12 +152,10 @@ saver = tf.train.Saver()
 
 with tf.Session() as sess:
     sess.run(init)
-    saver = tf.train.Saver()
 
     ans = sess.run([heatmaps, offsets, displacementFwd, displacementBwd], feed_dict={
         image: [np.ndarray(shape=(width, height, 3), dtype=np.float32)]
-    }
-                   )
+    })
 
     save_dir = './checkpoints'
     save_path = os.path.join(save_dir, 'model.ckpt')
@@ -164,7 +164,7 @@ with tf.Session() as sess:
     tf.train.write_graph(sess.graph, "./models/", "model.pbtxt")
 
     # Result
-    input_image = read_imgfile("./images/tennis_in_crowd.jpg", width, height)
+    input_image = read_imgfile("./images/tognetti.jpg", width, height)
     input_image = np.array(input_image, dtype=np.float32)
     input_image = input_image.reshape(1, width, height, 3)
     mobileNetOutput = sess.run(x, feed_dict={image: input_image})
@@ -172,33 +172,51 @@ with tf.Session() as sess:
     heatmaps_result, offsets_result, displacementFwd_result, displacementBwd_result = sess.run(
         [heatmaps, offsets, displacementFwd, displacementBwd], feed_dict={image: input_image})
 
-    print("Heatmaps shape", heatmaps_result.shape)
-    print("Offsets shape", offsets_result.shape)
+    prediction = decode_single_pose(heatmaps_result, offsets_result, outputStride)
+    pprint(prediction)
 
-    print(input_image)
-    print(input_image.shape)
-    print(np.mean(input_image))
+img = cv2.imread("./images/tognetti.jpg")
+img = cv2.resize(img, (width, height))
+img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+for k in prediction["keypoints"]:
+    cv2.circle(img, (k["position"]["x"], k["position"]["y"]), 2, (0, 255, 0), -1)
+cv2.imwrite("test.jpg", img)
 
-    count = 0
-    for b in buff:
-        conv_result = sess.run(b, feed_dict={image: input_image})
-        print("========")
-        print(count)
-        print(conv_result[0:1, 0:1, :])
-        print(conv_result.shape)
-        print(np.mean(conv_result))
-        count += 1
-
-    print("========")
-    print("mobileNetOutput")
-    print(mobileNetOutput[0:1, 0:1, :])
-    print(mobileNetOutput.shape)
-    print(np.mean(mobileNetOutput))
-
-    heatmaps_result = heatmaps_result[0]
-
-    print("========")
-    print("heatmaps")
-    print(heatmaps_result[0:1, 0:1, :])
-    print(heatmaps_result.shape)
-    print(np.mean(heatmaps_result))
+    # print("Heatmaps shape", heatmaps_result.shape)
+    # print("Offsets shape", offsets_result.shape)
+    #
+    # print(input_image)
+    # print(input_image.shape)
+    # print(np.mean(input_image))
+    #
+    # count = 0
+    # for b in buff:
+    #     conv_result = sess.run(b, feed_dict={image: input_image})
+    #     print("========")
+    #     print(count)
+    #     print(conv_result[0:1, 0:1, :])
+    #     print(conv_result.shape)
+    #     print(np.mean(conv_result))
+    #     count += 1
+    #
+    # print("========")
+    # print("mobileNetOutput")
+    # print(mobileNetOutput[0:1, 0:1, :])
+    # print(mobileNetOutput.shape)
+    # print(np.mean(mobileNetOutput))
+    #
+    # heatmaps_result = heatmaps_result[0]
+    #
+    # print("========")
+    # print("heatmaps")
+    # print(heatmaps_result[0:1, 0:1, :])
+    # print(heatmaps_result.shape)
+    # print(np.mean(heatmaps_result))
+    #
+    # offsets_result = offsets_result[0]
+    #
+    # print("========")
+    # print("offsets")
+    # print(offsets_result[0:1, 0:1, :])
+    # print(offsets_result.shape)
+    # print(np.mean(offsets_result))
