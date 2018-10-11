@@ -115,14 +115,14 @@ def decode_single_pose(heatmaps, offsets, output_stride):
 
     keypoints = [{
         "position": {
-            "y": offset_points[keypoint, 0],
-            "x": offset_points[keypoint, 1]
+            "y": str(offset_points[keypoint, 0]),
+            "x": str(offset_points[keypoint, 1])
         },
         "part": PART_NAMES[keypoint],
-        "score": score
+        "score": str(score)
     } for keypoint, score in enumerate(keypoint_confidence)]
 
     return {
         "keypoints": keypoints,
-        "score": (sum(keypoint_confidence) / len(keypoint_confidence))
+        "score": str(sum(keypoint_confidence) / len(keypoint_confidence))
     }

@@ -34,7 +34,7 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
         pos_splines.append(pos_spline)
 
         # If no measured velocities
-        if len(vel_matrix) == 0:
+        if not vel_matrix or len(vel_matrix) == 0:
             # Ensure the spline of velocity is being used
             use_vel_spl = True
 

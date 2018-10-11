@@ -2,6 +2,7 @@ import json
 import math
 import threading
 import time
+from pprint import pprint
 import subprocess
 import numpy as np
 from utils.utils import *
@@ -13,6 +14,7 @@ TIME_INDEX = 0
 POS_INDEX = 1
 ERROR = 0.001
 INTERP_FREQ = 0.1
+
 
 class PoseNet:
     def __init__(self, shimi):
@@ -37,7 +39,7 @@ class PoseNet:
         dispatcher = osc_dispatcher.Dispatcher()
 
         # Listen for messages from PoseNet
-        dispatcher.map('/posenet', self.posenet_receiver)
+        dispatcher.map('/predictions', self.posenet_receiver)
 
         server = osc_server.ThreadingOSCUDPServer(("localhost", 8000), dispatcher)
         server_thread = threading.Thread(target=server.serve_forever)
@@ -131,7 +133,8 @@ class PoseNet:
         NECK_LR_R_HEURISTIC_RIGHT = 10.0
 
         # Normalizes to 0.0 - 0.5
-        normalize_neck_left = lambda t: (t - NECK_LR_L_HEURISTIC_LEFT) / (NECK_LR_L_HEURISTIC_MIDDLE - NECK_LR_L_HEURISTIC_LEFT) / 2
+        normalize_neck_left = lambda t: (t - NECK_LR_L_HEURISTIC_LEFT) / (
+                NECK_LR_L_HEURISTIC_MIDDLE - NECK_LR_L_HEURISTIC_LEFT) / 2
 
         # Normalizes to 0.5 - 1.0
         normalize_neck_right = lambda t: 0.5 + (1.0 - math.pow(0.3, t / NECK_LR_R_HEURISTIC_RIGHT))
@@ -195,17 +198,26 @@ class PoseNet:
 
     def start_posenet(self):
         print("Starting PoseNet...")
-        self.posenet = subprocess.Popen("node posenet/posenet.js", shell=True)
+        self.posenet = subprocess.Popen(
+            "/usr/bin/python3.5 posenet/posenet_python/posenet_model_python.py --path posenet/posenet_python --ip 127.0.0.1 --port 8000",
+            shell=True)
 
     def stop_posenet(self):
-        if(self.posenet):
+        if (self.posenet):
             print("Stopping PoseNet...")
             self.receiving_from_posenet = False
-            self.posenet.kill()
+            try:
+                self.posenet.kill()
+            except Exception:
+                pass
             self.posenet = None
+
 
 class Point:
     def __init__(self, x, y, score=None):
-        self.x = x
-        self.y = y
-        self.score = score
+        self.x = float(x)
+        self.y = float(y)
+        if score:
+            self.score = float(score)
+        else:
+            self.score = None

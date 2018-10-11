@@ -8,18 +8,22 @@ import os
 import os.path as op
 import yaml
 import time
+import argparse
 from decode_single_pose import decode_single_pose
+from pythonosc import udp_client
 
 
 class PoseNetPython():
-    def __init__(self):
+    def __init__(self, ip=None, port=None, project_path="."):
+        self.project_path = project_path
+
         self.width, \
         self.height, \
         self.checkpoint, \
         self.MobileNet_architecture, \
         self.output_stride = self.setup()
 
-        self.model_path = os.path.join("./models", self.checkpoint)
+        self.model_path = os.path.join(self.project_path, "models", self.checkpoint)
 
         self.cam = cv2.VideoCapture(0)
         if not self.cam.isOpened():
@@ -32,9 +36,16 @@ class PoseNetPython():
             print("Making model...")
             self.make_model()
 
+        if ip and port:
+            self.address = "/predictions"
+            print("Sending predictions to %s at %s:%d" % (self.address, ip, port))
+            self.client = udp_client.SimpleUDPClient(ip, port)
+        else:
+            self.client = None
+
     def setup(self):
         # Load configuration from YAML file
-        cfg = yaml.load(open("config.yaml", "r+"))
+        cfg = yaml.load(open(op.join(self.project_path, "config.yaml"), "r+"))
         output_stride = cfg['outputStride']
         checkpoints = cfg['checkpoints']
         checkpoint = checkpoints[cfg['chk']]
@@ -57,14 +68,14 @@ class PoseNetPython():
         layers = toOutputStridedLayers(self.MobileNet_architecture, self.output_stride)
 
         # Load weights
-        weights_file = open(os.path.join('./weights/', self.checkpoint, "manifest.json"))
+        weights_file = open(os.path.join(self.project_path, "weights", self.checkpoint, "manifest.json"))
         variables = json.load(weights_file)
         weights_file.close()
 
         # Format weights and load as tensors
         for x in variables:
             filename = variables[x]["filename"]
-            byte = open(os.path.join('./weights/', self.checkpoint, filename), 'rb').read()
+            byte = open(os.path.join(self.project_path, "weights", self.checkpoint, filename), 'rb').read()
             fmt = str(int(len(byte) / struct.calcsize('f'))) + 'f'
             d = struct.unpack(fmt, byte)
             d = tf.cast(d, tf.float32)
@@ -144,6 +155,9 @@ class PoseNetPython():
                 displacement_fwd = graph.get_tensor_by_name("displacement_fwd_2:0")
                 displacement_bwd = graph.get_tensor_by_name("displacement_bwd_2:0")
 
+                start_time = time.time()
+                frames_completed = 0
+
                 # Start reading from webcam
                 while True:
                     ret_val, img = self.cam.read()
@@ -158,20 +172,28 @@ class PoseNetPython():
                     heatmaps_result = np.array(heatmaps_result)
                     offsets_result = np.array(offsets_result)
 
-                    decode_start = time.time()
                     prediction = decode_single_pose(heatmaps_result, offsets_result, self.output_stride)
-                    print("Time to decode:", time.time() - decode_start)
+
+                    if self.client:
+                        self.client.send_message(self.address, [json.dumps(prediction)])
 
                     img = cv2.resize(img, (self.width, self.height))
 
                     for k in prediction["keypoints"]:
-                        cv2.circle(img, (int(round(k["position"]["x"])), int(round(k["position"]["y"]))), 2,
+                        cv2.circle(img, (int(round(float(k["position"]["x"]))), int(round(float(k["position"]["y"])))), 2,
                                    (0, 255, 0), -1)
 
                     cv2.imshow("PoseNet", img)
 
                     if cv2.waitKey(1) == 27:
                         break  # esc to quit
+
+                    frames_completed += 1
+                    time_elapsed = time.time() - start_time
+                    if time_elapsed > 1:
+                        print("FPS: %f" % (frames_completed / time_elapsed))
+                        frames_completed = 0
+                        start_time = time.time()
 
                 cv2.destroyAllWindows()
 
@@ -269,4 +291,12 @@ def format_img(img, width, height):
     return img
 
 if __name__ == "__main__":
-    p = PoseNetPython()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--path", default=".", help="The path to this project directory.")
+    parser.add_argument("--ip", default=None, help="The IP address of the OSC server to send to.")
+    parser.add_argument("--port", type=int, default=None, help="The port of the OSC server to send to.")
+    args = parser.parse_args()
+
+    if args.ip and args.port:
+        p = PoseNetPython(ip=args.ip, port=args.port, project_path=args.path)
+        p.run_from_webcam()

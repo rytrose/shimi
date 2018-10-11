@@ -1,5 +1,5 @@
 imageSize: [ 513, 513 ]
-GOOGLE_CLOUD_STORAGE_DIR: 'https://storage.googleapis.com/tfjs-models/weights/posenet/'
+GOOGLE_CLOUD_STORAGE_DIR: 'https://storage.googleapis.com/tfjs-models/weights/posenet_python/'
 checkpoints: [ 'mobilenet_v1_050', 'mobilenet_v1_075', 'mobilenet_v1_100', 'mobilenet_v1_101']
 chk: 1 # Checkpoint to use, index of checkpoints
 outputStride: 16
