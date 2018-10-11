@@ -5,10 +5,11 @@ from tensorflow.python.saved_model import tag_constants
 import cv2
 import numpy as np
 import os
+import os.path as op
 import yaml
-import sys
+import time
 from decode_single_pose import decode_single_pose
-from pprint import pprint
+
 
 class PoseNetPython():
     def __init__(self):
@@ -18,7 +19,18 @@ class PoseNetPython():
         self.MobileNet_architecture, \
         self.output_stride = self.setup()
 
-        self.model_path = "./saved_models"
+        self.model_path = os.path.join("./models", self.checkpoint)
+
+        self.cam = cv2.VideoCapture(0)
+        if not self.cam.isOpened():
+            self.cam = None
+            print("No webcam connected.")
+        else:
+            print("Webcam connected.")
+
+        if not op.exists(self.model_path):
+            print("Making model...")
+            self.make_model()
 
     def setup(self):
         # Load configuration from YAML file
@@ -94,24 +106,24 @@ class PoseNetPython():
 
             print("Saving model...")
 
-            tf.saved_model.simple_save(sess, self.model_path, {
-                "image": image
-            }, {
-                "heatmaps": heatmaps,
-                "offsets": offsets,
-                "displacement_fwd": displacement_fwd,
-                "displacement_bwd": displacement_bwd
-            })
+            tf.saved_model.simple_save(sess, self.model_path,
+                                       {
+                                           "image": image
+                                       },
+                                       {
+                                           "heatmaps": heatmaps,
+                                           "offsets": offsets,
+                                           "displacement_fwd": displacement_fwd,
+                                           "displacement_bwd": displacement_bwd
+                                       })
 
             print("saved.")
 
-            # save_dir = './checkpoints'
-            # save_path = os.path.join(save_dir, 'model.ckpt')
-            # saver.save(sess, save_path)
-            #
-            # tf.train.write_graph(sess.graph, "./models/", "model.pbtxt")
+    def run_from_webcam(self):
+        if not self.cam:
+            print("No webcam connected.")
+            return
 
-    def test(self):
         graph = tf.Graph()
         with graph.as_default():
             with tf.Session(graph=graph) as sess:
@@ -132,23 +144,41 @@ class PoseNetPython():
                 displacement_fwd = graph.get_tensor_by_name("displacement_fwd_2:0")
                 displacement_bwd = graph.get_tensor_by_name("displacement_bwd_2:0")
 
-                input_image = read_imgfile("./images/tognetti.jpg", self.width, self.height)
-                input_image = np.array(input_image, dtype=np.float32)
-                input_image = input_image.reshape(1, self.width, self.height, 3)
+                # Start reading from webcam
+                while True:
+                    ret_val, img = self.cam.read()
 
-                heatmaps_result, offsets_result, displacement_fwd_result, displacement_bwd_result = sess.run(
-                    [heatmaps, offsets, displacement_fwd, displacement_bwd], feed_dict={image: input_image})
+                    input_image = format_img(img, self.width, self.height)
+                    input_image = np.array(input_image, dtype=np.float32)
+                    input_image = input_image.reshape(1, self.width, self.height, 3)
 
-                prediction = decode_single_pose(heatmaps_result, offsets_result, self.output_stride)
-                pprint(prediction)
+                    heatmaps_result, offsets_result, displacement_fwd_result, displacement_bwd_result = sess.run(
+                        [heatmaps, offsets, displacement_fwd, displacement_bwd], feed_dict={image: input_image})
 
-        img = cv2.imread("./images/tognetti.jpg")
-        img = cv2.resize(img, (self.width, self.height))
-        for k in prediction["keypoints"]:
-            cv2.circle(img, (k["position"]["x"], k["position"]["y"]), 2, (0, 255, 0), -1)
-        cv2.imwrite("test.jpg", img)
+                    heatmaps_result = np.array(heatmaps_result)
+                    offsets_result = np.array(offsets_result)
+
+                    decode_start = time.time()
+                    prediction = decode_single_pose(heatmaps_result, offsets_result, self.output_stride)
+                    print("Time to decode:", time.time() - decode_start)
+
+                    img = cv2.resize(img, (self.width, self.height))
+
+                    for k in prediction["keypoints"]:
+                        cv2.circle(img, (int(round(k["position"]["x"])), int(round(k["position"]["y"]))), 2,
+                                   (0, 255, 0), -1)
+
+                    cv2.imshow("PoseNet", img)
+
+                    if cv2.waitKey(1) == 27:
+                        break  # esc to quit
+
+                cv2.destroyAllWindows()
 
 
+###########################
+# Model building functions
+###########################
 def toOutputStridedLayers(convolutionDefinition, outputStride):
     currentStride = 1
     rate = 1
@@ -177,32 +207,6 @@ def toOutputStridedLayers(convolutionDefinition, outputStride):
         blockId += 1
 
     return buff
-
-
-# layers = toOutputStridedLayers(mobileNetArchitectures, outputStride)
-#
-# f = open(os.path.join('./weights/', chkpoint, "manifest.json"))
-# variables = json.load(f)
-# f.close()
-
-
-# for x in variables:
-#     filename = variables[x]["filename"]
-#     byte = open(os.path.join('./weights/', chkpoint, filename), 'rb').read()
-#     fmt = str(int(len(byte) / struct.calcsize('f'))) + 'f'
-#     d = struct.unpack(fmt, byte)
-#     d = tf.cast(d, tf.float32)
-#     d = tf.reshape(d, variables[x]["shape"])
-#     variables[x]["x"] = tf.Variable(d, name=x)
-
-
-def read_imgfile(path, width, height):
-    img = cv2.imread(path)
-    img = cv2.resize(img, (width, height))
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = img.astype(float)
-    img = img * (2.0 / 255.0) - 1.0
-    return img
 
 
 def convToOutput(variables, mobileNetOutput, outputLayerName):
@@ -236,7 +240,8 @@ def separableConv(inputs, variables, stride, blockID, dilations):
     dwLayer = "Conv2d_" + str(blockID) + "_depthwise"
     pwLayer = "Conv2d_" + str(blockID) + "_pointwise"
 
-    w = tf.nn.depthwise_conv2d(inputs, depthwiseWeights(variables, dwLayer), stride, 'SAME', rate=dilations, data_format='NHWC')
+    w = tf.nn.depthwise_conv2d(inputs, depthwiseWeights(variables, dwLayer), stride, 'SAME', rate=dilations,
+                               data_format='NHWC')
     w = tf.nn.bias_add(w, biases(variables, dwLayer))
     w = tf.nn.relu6(w)
 
@@ -246,59 +251,22 @@ def separableConv(inputs, variables, stride, blockID, dilations):
 
     return w
 
-# image = tf.placeholder(tf.float32, shape=[1, imageSize, imageSize, 3], name='image')
-#
-# x = image
-# rate = [1, 1]
-# buff = []
-# with tf.variable_scope(None, 'MobilenetV1'):
-#     for m in layers:
-#         stride = [1, m['stride'], m['stride'], 1]
-#         rate = [m['rate'], m['rate']]
-#         if (m['convType'] == "conv2d"):
-#             x = conv(x, stride, m['blockId'])
-#             buff.append(x)
-#         elif (m['convType'] == "separableConv"):
-#             x = separableConv(x, stride, m['blockId'], rate)
-#             buff.append(x)
-#
-# heatmaps = convToOutput(x, 'heatmap_2')
-# offsets = convToOutput(x, 'offset_2')
-# displacementFwd = convToOutput(x, 'displacement_fwd_2')
-# displacementBwd = convToOutput(x, 'displacement_bwd_2')
-# heatmaps = tf.sigmoid(heatmaps, 'heatmap')
-#
-# init = tf.global_variables_initializer()
-# saver = tf.train.Saver()
-#
-# with tf.Session() as sess:
-#     sess.run(init)
-#
-#     ans = sess.run([heatmaps, offsets, displacementFwd, displacementBwd], feed_dict={
-#         image: [np.ndarray(shape=(width, height, 3), dtype=np.float32)]
-#     })
-#
-#     save_dir = './checkpoints'
-#     save_path = os.path.join(save_dir, 'model.ckpt')
-#     save_path = saver.save(sess, save_path)
-#
-#     tf.train.write_graph(sess.graph, "./models/", "model.pbtxt")
-#
-#     # Result
-#     input_image = read_imgfile("./images/tognetti.jpg", width, height)
-#     input_image = np.array(input_image, dtype=np.float32)
-#     input_image = input_image.reshape(1, width, height, 3)
-#     mobileNetOutput = sess.run(x, feed_dict={image: input_image})
-#
-#     heatmaps_result, offsets_result, displacementFwd_result, displacementBwd_result = sess.run(
-#         [heatmaps, offsets, displacementFwd, displacementBwd], feed_dict={image: input_image})
-#
-#     prediction = decode_single_pose(heatmaps_result, offsets_result, outputStride)
-#     pprint(prediction)
-#
-# img = cv2.imread("./images/tognetti.jpg")
-# img = cv2.resize(img, (width, height))
-# img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-# for k in prediction["keypoints"]:
-#     cv2.circle(img, (k["position"]["x"], k["position"]["y"]), 2, (0, 255, 0), -1)
-# cv2.imwrite("test.jpg", img)
+
+def read_imgfile(path, width, height):
+    img = cv2.imread(path)
+    img = cv2.resize(img, (width, height))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.astype(float)
+    img = img * (2.0 / 255.0) - 1.0
+    return img
+
+
+def format_img(img, width, height):
+    img = cv2.resize(img, (width, height))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.astype(float)
+    img = img * (2.0 / 255.0) - 1.0
+    return img
+
+if __name__ == "__main__":
+    p = PoseNetPython()
