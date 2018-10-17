@@ -7,3 +7,5 @@ video_gestures/
 shimi_gestures/
 venv/
 checkpoints/
+spotify/.cache-*
+spotify/client_credentials.py
