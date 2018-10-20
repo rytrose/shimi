@@ -197,6 +197,15 @@ class PoseNetPython():
 
                 cv2.destroyAllWindows()
 
+    def run_on_videos(self, video_path="", out_path="."):
+        if not video_path:
+            print("Please specify path of videos to run PoseNet on.")
+            return
+
+        video_paths = [op.join(video_path, filename) for filename in os.listdir(video_path)]
+        print(video_paths)
+
+
 
 ###########################
 # Model building functions
@@ -295,8 +304,14 @@ if __name__ == "__main__":
     parser.add_argument("--path", default=".", help="The path to this project directory.")
     parser.add_argument("--ip", default=None, help="The IP address of the OSC server to send to.")
     parser.add_argument("--port", type=int, default=None, help="The port of the OSC server to send to.")
+    parser.add_argument("--run", default="webcam", help="What PoseNet should be run on.")
+    parser.add_argument("--video_path", default=".", help="Path to directory of videos that PoseNet should be run on.")
+    parser.add_argument("--out_path", default=".", help="Path that any output should be saved to.")
     args = parser.parse_args()
 
-    if args.ip and args.port:
+    if args.run == "webcam" and (args.ip and args.port):
         p = PoseNetPython(ip=args.ip, port=args.port, project_path=args.path)
         p.run_from_webcam()
+    elif args.run == "videos":
+        p = PoseNetPython(project_path=args.path)
+        p.run_on_videos(video_path=args.video_path, out_path=args.out_path)

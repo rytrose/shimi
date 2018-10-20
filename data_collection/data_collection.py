@@ -15,7 +15,7 @@ VIDEO_PATH = DATA_COLLECTION_PATH + "/video_gestures"
 SHIMI_PATH = DATA_COLLECTION_PATH + "/shimi_gestures"
 SUBJECT_NUMBER = 0
 GESTURE_NUMBER = 1
-CAMERA_ANGLE = 2
+POSITION = 2
 MAX_TRIES = 100
 
 
@@ -51,12 +51,12 @@ class DataCollector:
 
         print("If the camera is not on, please run turn_on_camera().")
 
-    def record_new_video_gesture(self, subject_number, gesture_number, camera_angle, duration=2.0, wait=3.0):
+    def record_new_video_gesture(self, subject_number, gesture_number, position, duration=2.0, wait=3.0):
         # Record the time
         timestamp = time.strftime("%m%d%y_%H%M%S")
 
         # Specify the name and path
-        filename = "{0}_{1}_{2}_{3}.mov".format(subject_number, gesture_number, camera_angle, timestamp)
+        filename = "{0}_{1}_{2}_{3}.mov".format(subject_number, gesture_number, position, timestamp)
         filepath = os.path.join(VIDEO_PATH, filename)
 
         # Count down to recording
@@ -71,9 +71,9 @@ class DataCollector:
         # Stop the recording
         self.client.send_message("/stopRecord", [])
 
-    def play_video_gesture(self, subject_number, gesture_number, camera_angle):
+    def play_video_gesture(self, subject_number, gesture_number, position):
         # Get video filename
-        filename = self.get_video_filename(subject_number, gesture_number, camera_angle)
+        filename = self.get_video_filename(subject_number, gesture_number, position)
 
         # Return if unable to find that gesture video
         if not filename:
@@ -84,9 +84,13 @@ class DataCollector:
         filepath = os.path.join(VIDEO_PATH, filename)
         self.client.send_message("/play", filepath)
 
-    def record_new_shimi_gesture(self, shimi, subject_number, gesture_number, camera_angle, wait=3.0):
+    def record_new_shimi_gesture(self, shimi, subject_number, gesture_number, position, motors=None, wait=3.0):
+        # Add default motors
+        if not motors:
+            motors = [shimi.torso, shimi.neck_lr, shimi.neck_ud]
+
         # Get appropriate video file
-        filename = self.get_video_filename(subject_number, gesture_number, camera_angle)
+        filename = self.get_video_filename(subject_number, gesture_number, position)
 
         # Return if unable to find that gesture video
         if not filename:
@@ -104,11 +108,11 @@ class DataCollector:
             print("Unable to get the duration of the associated video gesture.")
             return
 
-        # Put Shimi in initial position
-        shimi.initial_position()
+        # Disable torque
+        shimi.disable_torque()
 
         # Create new recorder for neck and torso
-        recorder = Recorder(shimi, [shimi.torso, shimi.neck_lr, shimi.neck_ud], duration, wait_time=0)
+        recorder = Recorder(shimi, motors, duration, wait_time=0)
 
         # Countdown to record
         countdown(wait)
@@ -125,9 +129,15 @@ class DataCollector:
 
         return recorder
 
-    def play_video_and_shimi(self, shimi, subject_number, gesture_number, camera_angle):
+    def play_video_and_shimi(self, shimi, subject_number, gesture_number, position, recorder=None):
+        # If a recorder wasn't provided
+        if not recorder:
+            # Get appropriate gesture recorder
+            gesture_filename = self.get_shimi_gesture(subject_number, gesture_number, position)[:-2]
+            recorder = load_recorder(shimi, gesture_filename, path=SHIMI_PATH)
+
         # Get appropriate video file
-        video_filename = self.get_video_filename(subject_number, gesture_number, camera_angle)
+        video_filename = self.get_video_filename(subject_number, gesture_number, position)
 
         # Return if unable to find that gesture video
         if not video_filename:
@@ -136,31 +146,29 @@ class DataCollector:
 
         video_filepath = os.path.join(VIDEO_PATH, video_filename)
 
-        # Get appropriate gesture recorder
-        gesture_filename = self.get_shimi_gesture(subject_number, gesture_number)[:-2]
-        recorder = load_recorder(shimi, gesture_filename, path=SHIMI_PATH)
-
         start_video = lambda: self.client.send_message("/play", video_filepath)
 
         # Start recorder playback, with callback to trigger video
         recorder.play(callback=start_video)
 
-    def get_shimi_gesture(self, subject_number, gesture_number):
+    def get_shimi_gesture(self, subject_number, gesture_number, position):
         print("Finding shimi gesture...")
         filename = None
         for f in os.listdir(SHIMI_PATH):
             split = f.split("_")
-            if len(split) > 3 \
+            if len(split) > 4 \
                     and int(split[SUBJECT_NUMBER]) == subject_number \
-                    and int(split[GESTURE_NUMBER]) == gesture_number:
+                    and int(split[GESTURE_NUMBER]) == subject_number \
+                    and int(split[POSITION]) == position:
                 filename = f
 
         if not filename:
-            print("Could not find a gesture with subject {0} and gesture {1}.".format(subject_number,
-                                                                                      gesture_number))
+            print("Could not find a gesture with subject {0}, gesture {1}, position {2}.".format(subject_number,
+                                                                                                 gesture_number,
+                                                                                                 position))
         return filename
 
-    def get_video_filename(self, subject_number, gesture_number, camera_angle):
+    def get_video_filename(self, subject_number, gesture_number, position):
         print("Finding video...")
         filename = None
         for f in os.listdir(VIDEO_PATH):
@@ -168,21 +176,21 @@ class DataCollector:
             if len(split) > 3 \
                     and int(split[SUBJECT_NUMBER]) == subject_number \
                     and int(split[GESTURE_NUMBER]) == gesture_number \
-                    and int(split[CAMERA_ANGLE]) == camera_angle:
+                    and int(split[POSITION]) == position:
                 filename = f
 
         if not filename:
             print("Could not find a video with subject {0}, gesture {1}, and camera angle {2}.".format(subject_number,
                                                                                                        gesture_number,
-                                                                                                       camera_angle))
+                                                                                                       position))
         return filename
 
-    def save_shimi_gesture(self, recorder, subject_number, gesture_number):
+    def save_shimi_gesture(self, recorder, subject_number, gesture_number, position):
         # Record the time
         timestamp = time.strftime("%m%d%y_%H%M%S")
 
         # Specify the name
-        filename = "{0}_{1}_{2}".format(subject_number, gesture_number, timestamp)
+        filename = "{0}_{1}_{2}_{3}".format(subject_number, gesture_number, position, timestamp)
 
         # Save to correct folder
         recorder.save(filename, path=SHIMI_PATH)
