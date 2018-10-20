@@ -9,6 +9,7 @@ import os.path as op
 import yaml
 import time
 import argparse
+import pickle
 from decode_single_pose import decode_single_pose
 from pythonosc import udp_client
 
@@ -146,15 +147,15 @@ class PoseNetPython():
                     self.model_path
                 )
 
-                print("...loaded.")
-
                 # Get restored tensors
                 image = graph.get_tensor_by_name("image:0")
                 heatmaps = graph.get_tensor_by_name("heatmap:0")
                 offsets = graph.get_tensor_by_name("offset_2:0")
                 displacement_fwd = graph.get_tensor_by_name("displacement_fwd_2:0")
                 displacement_bwd = graph.get_tensor_by_name("displacement_bwd_2:0")
-
+    
+                print("...loaded.")
+            
                 start_time = time.time()
                 frames_completed = 0
 
@@ -203,8 +204,62 @@ class PoseNetPython():
             return
 
         video_paths = [op.join(video_path, filename) for filename in os.listdir(video_path)]
-        print(video_paths)
+        
+        graph = tf.Graph()
+        with graph.as_default():
+            with tf.Session(graph=graph) as sess:
+                print("Loading model...")
 
+                tf.saved_model.loader.load(
+                    sess,
+                    [tag_constants.SERVING],
+                    self.model_path
+                )
+
+                # Get restored tensors
+                image = graph.get_tensor_by_name("image:0")
+                heatmaps = graph.get_tensor_by_name("heatmap:0")
+                offsets = graph.get_tensor_by_name("offset_2:0")
+                displacement_fwd = graph.get_tensor_by_name("displacement_fwd_2:0")
+                displacement_bwd = graph.get_tensor_by_name("displacement_bwd_2:0")
+
+                print("...loaded.")                
+
+                for video in video_paths:
+                    print("Opening %s" % video)
+                    cap = cv2.VideoCapture(video)
+                    frames = []
+                    
+                    while(cap.isOpened()):
+                        ret, img = cap.read()
+                        if not ret:
+                            break
+                        try:
+                            input_image = format_img(img, self.width, self.height)
+                            input_image = np.array(input_image, dtype=np.float32)
+                            input_image = input_image.reshape(1, self.width, self.height, 3)
+
+                            heatmaps_result, offsets_result, displacement_fwd_result, displacement_bwd_result = sess.run(
+                                [heatmaps, offsets, displacement_fwd, displacement_bwd], feed_dict={image: input_image})
+
+                            heatmaps_result = np.array(heatmaps_result)
+                            offsets_result = np.array(offsets_result)
+
+                            prediction = decode_single_pose(heatmaps_result, offsets_result, self.output_stride)
+
+                            frames.append({
+                                "prediction": prediction,
+                                "timestamp": cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
+                            })
+                        except Exception:
+                            print("Unable to predict frame.")
+
+                    cap.release()
+                    
+                    filename = video.split("/")[-1][:-4] + "_posenet.p"
+                    save_path = op.join(out_path, filename)
+                    pickle.dump(frames, open(save_path, 'wb'))
+                    print("Saved video to %s" % save_path)       
 
 
 ###########################
