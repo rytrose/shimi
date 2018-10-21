@@ -254,6 +254,17 @@ class PoseNetPython():
                         except Exception:
                             print("Unable to predict frame.")
 
+                        img = cv2.resize(img, (self.width, self.height))
+
+                        for k in prediction["keypoints"]:
+                            cv2.circle(img, (int(round(float(k["position"]["x"]))), int(round(float(k["position"]["y"])))), 2,
+                                   (0, 255, 0), -1)
+
+                        cv2.imshow("PoseNet", img)
+
+                        if cv2.waitKey(1) == 27:
+                            break  # esc to quit
+
                     cap.release()
                     
                     filename = video.split("/")[-1][:-4] + "_posenet.p"
