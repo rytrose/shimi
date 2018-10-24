@@ -24,6 +24,7 @@ POSENET_POINTS_TO_USE = ['nose', 'leftEye', 'rightEye', 'leftEar', 'rightEar', '
 
 X_POINT = 0
 Y_POINT = 1
+CONFIDENCE = 2
 
 
 def format_posenet_shimi(posenet_path=".", shimi_path="."):
@@ -95,9 +96,9 @@ def format_posenet_shimi(posenet_path=".", shimi_path="."):
     return posenet_input, shimi_targets
 
 
-def format_posenet(posenet_object):
+def format_posenet(posenet_object, ):
     """
-    Formats a PoseNet analyzed video into a list of feature vectors with shape 2 * len(POSENET_POINTS_TO_USE) X N,
+    Formats a PoseNet analyzed video into a list of feature vectors with shape 3 * len(POSENET_POINTS_TO_USE) X N,
         where N is the number of frames in the video.
     :param posenet_object: a collection of PoseNet analyzed frames for a video, with timestamps
     :return: a list of feature vectors, a list of timestamps for the feature vectors
@@ -106,13 +107,14 @@ def format_posenet(posenet_object):
     timestamps = []
 
     for prediction in posenet_object:
-        points_vector = [0 for _ in range(2 * len(POSENET_POINTS_TO_USE))]
+        points_vector = [0 for _ in range(3 * len(POSENET_POINTS_TO_USE))]
 
         for point in prediction["prediction"]["keypoints"]:
             try:
                 part_index = POSENET_POINTS_TO_USE.index(point["part"])
                 points_vector[part_index + X_POINT] = float(point["position"]["x"])
                 points_vector[part_index + Y_POINT] = float(point["position"]["y"])
+                points_vector[part_index + CONFIDENCE] = float(point["score"])
             except ValueError:
                 continue
 
@@ -147,7 +149,7 @@ def format_shimi(shimi_object):
     return positions_vectors, timestamps
 
 def test_linear_regression(input_train, target_train, input_test, target_test):
-    regr = make_pipeline(PolynomialFeatures(1), linear_model.Ridge())
+    regr = make_pipeline(PolynomialFeatures(2), linear_model.Ridge())
     regr.fit(input_train.T, target_train.T)
     predictions = regr.predict(input_test.T)
     print("Mean squared error: %.2f"
