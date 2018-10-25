@@ -7,6 +7,7 @@ import pickle
 import numpy as np
 import os
 import os.path as op
+# from motion.recorder import Recorder
 
 SUBJECT_NUMBER = 0
 GESTURE_NUMBER = 1
