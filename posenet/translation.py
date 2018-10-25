@@ -1,13 +1,12 @@
-from sklearn import linear_model
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.pipeline import make_pipeline
-from sklearn.metrics import mean_squared_error, r2_score
+# from sklearn import linear_model
+# from sklearn.preprocessing import PolynomialFeatures
+# from sklearn.pipeline import make_pipeline
+# from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import pickle
 import numpy as np
 import os
 import os.path as op
-from motion.recorder import Recorder
 
 SUBJECT_NUMBER = 0
 GESTURE_NUMBER = 1
@@ -93,10 +92,10 @@ def format_posenet_shimi(posenet_path=".", shimi_path="."):
         else:
             shimi_targets = np.concatenate((shimi_targets, file_shimi_targets), axis=1)
 
-    return posenet_input, shimi_targets
+    return posenet_input.T, shimi_targets.T
 
 
-def format_posenet(posenet_object, ):
+def format_posenet(posenet_object):
     """
     Formats a PoseNet analyzed video into a list of feature vectors with shape 3 * len(POSENET_POINTS_TO_USE) X N,
         where N is the number of frames in the video.
@@ -148,27 +147,27 @@ def format_shimi(shimi_object):
 
     return positions_vectors, timestamps
 
-def test_linear_regression(input_train, target_train, input_test, target_test):
-    regr = make_pipeline(PolynomialFeatures(2), linear_model.Ridge())
-    regr.fit(input_train.T, target_train.T)
-    predictions = regr.predict(input_test.T)
-    print("Mean squared error: %.2f"
-          % mean_squared_error(target_test, predictions.T))
-    print('Variance score: %.2f' % r2_score(target_test, predictions.T))
-
-    target = Recorder(None, [1, 2, 3, 4, 5], target_test.T.shape[1] * 0.1)
-    target.positions = target_test.T
-
-    pred = Recorder(None, [1, 2, 3, 4, 5], predictions.shape[1] * 0.1)
-    pred.positions = predictions
-
-    a = plt.axes((0.0, 0.5, 1.0, 0.5))
-    b = plt.axes((0.0, 0.0, 1.0, 0.5))
-
-    target.plot(a)
-    pred.plot(b)
-
-    plt.show()
+# def test_linear_regression(input_train, target_train, input_test, target_test):
+#     regr = make_pipeline(PolynomialFeatures(1), linear_model.Ridge())
+#     regr.fit(input_train.T, target_train.T)
+#     predictions = regr.predict(input_test.T)
+#     print("Mean squared error: %.2f"
+#           % mean_squared_error(target_test, predictions.T))
+#     print('Variance score: %.2f' % r2_score(target_test, predictions.T))
+#
+#     target = Recorder(None, [1, 2, 3, 4, 5], target_test.T.shape[1] * 0.1)
+#     target.positions = target_test.T
+#
+#     pred = Recorder(None, [1, 2, 3, 4, 5], predictions.shape[1] * 0.1)
+#     pred.positions = predictions
+#
+#     a = plt.axes((0.0, 0.5, 1.0, 0.5))
+#     b = plt.axes((0.0, 0.0, 1.0, 0.5))
+#
+#     target.plot(a)
+#     pred.plot(b)
+#
+#     plt.show()
 
 if __name__ == "__main__":
     posenet_train, shimi_train = format_posenet_shimi(posenet_path="../data_collection/posenet_gestures",
@@ -177,4 +176,4 @@ if __name__ == "__main__":
     posenet_test, shimi_test = format_posenet_shimi(posenet_path="../data_collection/posenet_test",
                                                       shimi_path="../data_collection/shimi_test")
 
-    test_linear_regression(posenet_train, shimi_train, posenet_test, shimi_test)
+    # test_linear_regression(posenet_train, shimi_train, posenet_test, shimi_test)
