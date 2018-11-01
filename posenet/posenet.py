@@ -17,13 +17,13 @@ INTERP_FREQ = 0.1
 
 
 class PoseNet:
-    def __init__(self, shimi, on_prediction=None):
+    def __init__(self, shimi, on_pred=None):
         # Reference to Shimi and motor controller
         self.shimi = shimi
 
         # Function for handling real-time predictions from posenet
         #   Should receive the pose in a dict as the first argument
-        self.on_prediction = on_prediction
+        self.on_prediction = on_pred
 
         # Start time of recording
         self.recording_start = None
