@@ -1,5 +1,4 @@
-import simpleaudio as sa
-from shimi import *
+import pygame.mixer as mixer
 from motion.recorder import *
 from motion.move import *
 import threading
@@ -9,14 +8,20 @@ def play_outkast(shimi):
     # Move to initial positions
     shimi.initial_position()
 
+    # Initialize audio mixer
+    mixer.init()
+
+    # Load song
+    mixer.music.load('audio/outkast.wav')
+
     # Rest for a little
     time.sleep(0.5)
 
-    # Load the song
-    outkast = sa.WaveObject.from_wave_file('audio/outkast.wav')
-
-    # Start playback
-    play_obj = outkast.play()
+    # # Load the song
+    # outkast = sa.WaveObject.from_wave_file('audio/outkast.wav')
+    #
+    # # Start playback
+    # play_obj = outkast.play()
 
     beat = 0.68
 
@@ -80,6 +85,7 @@ def play_outkast(shimi):
         torso.add_move(0.5, beat * 2)
     torso.add_move(0.95, beat)
 
+    # Start moves
     neck_lr.start()
     neck_ud.start()
     neck_ud_lin.start()
@@ -87,9 +93,18 @@ def play_outkast(shimi):
     foot_lin.start()
     torso.start()
 
+    # Start song
+    mixer.music.play()
+
 def play_opera(shimi):
-    # Load the song
-    opera = sa.WaveObject.from_wave_file('audio/opera.wav')
+    # Move to initial positions
+    shimi.initial_position()
+
+    # Initialize audio mixer
+    mixer.init()
+
+    # Load song
+    mixer.music.load('audio/opera.wav')
 
     # Load the movement
     r = load_recorder(shimi, "opera")
@@ -102,13 +117,10 @@ def play_opera(shimi):
     time.sleep(2.7)
 
     # Start playback
-    play_obj = opera.play()
+    mixer.music.play()
 
     # Wait for move to end
     move.join()
-
-    # Stop playback
-    play_obj.stop()
 
     # Move back to initial position
     shimi.initial_position()
