@@ -9,23 +9,16 @@ from pprint import pprint
 class Shimi:
     # Constructor
     def __init__(self, silent=False):
-        # Attempt to load robot model
-        # self.robot = pypot.robot.from_json(model_path)
+        try:
+            # Setup serial connection to motors and get the controller
+            self.controller = self.setup(silent)
 
-        # Setup serial connection to motors and get the controller
-        self.controller = self.setup(silent)
+            # Set motors to initial positions
+            self.initial_position()
+        except Exception as e:
+            self.controller = None
+            print("WARNING, MOTOR ERROR.", e)
 
-        # Stores active movements
-        self.active_moves = {
-            TORSO: None,
-            NECK_LR: None,
-            NECK_UD: None,
-            PHONE: None,
-            FOOT: None
-        }
-
-        # Set motors to initial positions
-        self.initial_position()
 
     # Establishes serial connection to motors
     def setup(self, silent):
@@ -44,7 +37,7 @@ class Shimi:
             print('Found motors with the following IDs:', ids)
 
             # Current settings for found motors
-            pprint(controller.get_control_table(ids))
+            # pprint(controller.get_control_table(ids))
 
         return controller
 
