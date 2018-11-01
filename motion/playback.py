@@ -29,7 +29,6 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
     vel_splines = []
     for i, m in enumerate(motors):
         pos_spline_obj = UnivariateSpline(timestamps, pos_matrix[:,i])
-        pos_spline_obj.set_smoothing_factor(0)
         pos_spline = pos_spline_obj(timestamps)
         pos_spline = pos_spline.reshape(pos_spline.shape[0], 1)
         pos_splines.append(pos_spline)
@@ -57,13 +56,13 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
         # Plot if axes are provided
         if pos_ax:
             pos_ax.plot(timestamps, pos_matrix[:,i])
-            pos_ax.plot([INTERP_FREQ * i for i in range(int(duration / INTERP_FREQ))] + [duration], pos_spline)
+            pos_ax.plot(timestamps, pos_spline)
 
         if vel_ax:
             # Only plot this if there are velocities provided
             if vel_matrix:
                 vel_ax.plot(timestamps, vel_matrix[:,i])
-            vel_ax.plot([INTERP_FREQ * i for i in range(int(duration / INTERP_FREQ))] + [duration], vel_spline)
+            vel_ax.plot(timestamps, vel_spline)
 
     # Make plots if needed
     if pos_ax:

@@ -27,17 +27,9 @@ class LinearAccelMove(StoppableThread):
 
     def setup(self):
         pass
-        # # Stop existing move for motor if it exists
-        # if self.shimi.active_moves[self.motor]:
-        #     self.shimi.active_moves[self.motor].stop()
-        #
-        # # Add self to the active moves
-        # self.shimi.active_moves[self.motor] = self
 
     def teardown(self):
         pass
-        # # Remove self from active active_moves
-        # self.shimi.active_moves[self.motor] = None
 
     def move(self):
         start_time = time.time()
@@ -100,9 +92,6 @@ class LinearAccelMove(StoppableThread):
             self.positions = []
             self.durations = []
 
-        # print("Done moving. orig goal pos: {0} | pres pos: {1}".format(self.pos,
-        #                                                                self.shimi.controller.get_present_position(
-        #                                                                    [self.motor])))
 
     def run(self):
         while len(self.positions) > 0:
@@ -146,17 +135,9 @@ class LinearMove(StoppableThread):
 
     def setup(self):
         pass
-        # # Stop existing move for motor if it exists
-        # if self.shimi.active_moves[self.motor]:
-        #     self.shimi.active_moves[self.motor].stop()
-        #
-        # # Add self to the active moves
-        # self.shimi.active_moves[self.motor] = self
 
     def teardown(self):
         pass
-        # # Remove self from active active_moves
-        # self.shimi.active_moves[self.motor] = None
 
     def move(self):
         start_time = time.time()
