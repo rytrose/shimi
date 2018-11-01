@@ -54,7 +54,7 @@ class PoseNet:
         self.posenet = None
         self.start_posenet()
 
-    def posenet_receiver(self, _, pose_string):
+    def posenet_receiver(self, _, pose_string, fps):
         pose = json.loads(pose_string)
 
         if self.receiving_from_posenet == False:
@@ -63,7 +63,7 @@ class PoseNet:
 
         if self.on_prediction:
             # Call provided function
-            self.on_prediction(pose)
+            self.on_prediction(pose, fps)
         else:
             # Attempt Shimi mapping
             points = pose['keypoints']

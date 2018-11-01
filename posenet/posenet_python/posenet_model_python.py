@@ -131,7 +131,7 @@ class PoseNetPython():
 
             print("saved.")
 
-    def run_from_webcam(self):
+    def run_from_webcam(self, display=False):
         if not self.cam:
             print("No webcam connected.")
             return
@@ -158,7 +158,7 @@ class PoseNetPython():
             
                 start_time = time.time()
                 frames_completed = 0
-
+                fps = 0
                 # Start reading from webcam
                 while True:
                     ret_val, img = self.cam.read()
@@ -175,28 +175,31 @@ class PoseNetPython():
 
                     prediction = decode_single_pose(heatmaps_result, offsets_result, self.output_stride)
 
-                    if self.client:
-                        self.client.send_message(self.address, [json.dumps(prediction)])
+                    if display:
 
-                    img = cv2.resize(img, (self.width, self.height))
+                        img = cv2.resize(img, (self.width, self.height))
 
-                    for k in prediction["keypoints"]:
-                        cv2.circle(img, (int(round(float(k["position"]["x"]))), int(round(float(k["position"]["y"])))), 2,
+                        for k in prediction["keypoints"]:
+                            cv2.circle(img, (int(round(float(k["position"]["x"]))), int(round(float(k["position"]["y"])))), 2,
                                    (0, 255, 0), -1)
 
-                    cv2.imshow("PoseNet", img)
+                        cv2.imshow("PoseNet", img)
 
-                    if cv2.waitKey(1) == 27:
-                        break  # esc to quit
+                        if cv2.waitKey(1) == 27:
+                            break  # esc to quit
 
                     frames_completed += 1
                     time_elapsed = time.time() - start_time
                     if time_elapsed > 1:
-                        print("FPS: %f" % (frames_completed / time_elapsed))
+                        fps = frames_completed / time_elapsed
+                        print("FPS: %f" % fps)
                         frames_completed = 0
                         start_time = time.time()
 
-                cv2.destroyAllWindows()
+                    if self.client:
+                        self.client.send_message(self.address, [json.dumps(prediction), fps])                
+
+                    cv2.destroyAllWindows()
 
     def run_on_videos(self, video_path="", out_path="."):
         if not video_path:
@@ -373,11 +376,12 @@ if __name__ == "__main__":
     parser.add_argument("--run", default="webcam", help="What PoseNet should be run on.")
     parser.add_argument("--video_path", default=".", help="Path to directory of videos that PoseNet should be run on.")
     parser.add_argument("--out_path", default=".", help="Path that any output should be saved to.")
+    parser.add_argument("--display", default=False, help="For webcam, show the annotated video feed.")
     args = parser.parse_args()
 
     if args.run == "webcam" and (args.ip and args.port):
         p = PoseNetPython(ip=args.ip, port=args.port, project_path=args.path)
-        p.run_from_webcam()
+        p.run_from_webcam(display=args.display)
     elif args.run == "videos":
         p = PoseNetPython(project_path=args.path)
         p.run_on_videos(video_path=args.video_path, out_path=args.out_path)
