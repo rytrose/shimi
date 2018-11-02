@@ -379,7 +379,7 @@ if __name__ == "__main__":
     parser.add_argument("--display", default=False, help="For webcam, show the annotated video feed.")
     args = parser.parse_args()
 
-    if args.run == "webcam" and (args.ip and args.port):
+    if args.run == "webcam":
         p = PoseNetPython(ip=args.ip, port=args.port, project_path=args.path)
         p.run_from_webcam(display=args.display)
     elif args.run == "videos":
