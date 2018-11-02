@@ -220,13 +220,3 @@ class PoseNet:
             except Exception:
                 pass
             self.posenet = None
-
-
-class Point:
-    def __init__(self, x, y, score=None):
-        self.x = float(x)
-        self.y = float(y)
-        if score:
-            self.score = float(score)
-        else:
-            self.score = None

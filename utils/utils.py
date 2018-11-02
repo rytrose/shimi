@@ -21,3 +21,13 @@ def countdown(duration):
         sleep_time = min(1.0, waiting)
         waiting -= sleep_time
         time.sleep(sleep_time)
+
+# A class to abstract a point from PoseNet
+class Point:
+    def __init__(self, x, y, score=None):
+        self.x = float(x)
+        self.y = float(y)
+        if score:
+            self.score = float(score)
+        else:
+            self.score = None
