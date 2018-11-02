@@ -5,7 +5,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from shimi import Shimi
 from posenet.posenet import PoseNet
-from utils.utils import Point, denormalize
+from utils.utils import Point, normalize, denormalize
 import time
 
 
@@ -16,7 +16,7 @@ class GenerativePhrase:
         else:
             self.shimi = Shimi()
         self.posenet = PoseNet(self.shimi, on_pred=self.on_posenet_prediction)
-        self.update_freq = 0.2
+        self.update_freq = 0.1
         self.last_update = time.time()
         self.last_pos = 0.5
 
@@ -36,21 +36,26 @@ class GenerativePhrase:
 
         if nose:
             SCORE_THRESH = 0.7
-            MIN_VEL = 20
+            MOVE_THRESH = 0.05
+            MIN_VEL = 40
             MAX_VEL = 100
 
             if nose.score > SCORE_THRESH:
                 if time.time() > self.last_update + self.update_freq:
                     # Calculate where to look
-                    pos = nose.x / POSENET_WIDTH
+                    #  Camera image is flipped
+                    pos = 1 - (nose.x / POSENET_WIDTH)
 
                     # Calculate speed based on how far to move
-                    vel = max(abs(self.last_pos - pos) * MAX_VEL, MIN_VEL)
+                    current_pos = normalize(self.shimi.neck_lr, self.shimi.controller.get_present_speed([self.shimi.neck_lr])[0])
+                    vel = max(MIN_VEL + abs(current_pos - pos) * MAX_VEL, MIN_VEL)
 
-                    print("Moving to %f at vel %f" % (pos, vel))
+                    if abs(self.last_pos - pos) > MOVE_THRESH:
+                        print("Moving to %f at vel %f" % (pos, vel))
 
-                    self.shimi.controller.set_moving_speed({self.shimi.neck_lr: vel})
-                    self.shimi.controller.set_goal_position({self.shimi.neck_lr: denormalize(self.shimi.neck_lr, pos)})
+                        self.shimi.controller.set_moving_speed({self.shimi.neck_lr: vel})
+                        self.shimi.controller.set_goal_position({self.shimi.neck_lr: denormalize(self.shimi.neck_lr, pos)})
 
-                    self.last_pos = pos
+                        self.last_pos = pos
+                    
                     self.last_update = time.time()
