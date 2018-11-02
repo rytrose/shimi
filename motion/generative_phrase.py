@@ -5,7 +5,8 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from shimi import Shimi
 from posenet.posenet import PoseNet
-from utils.utils import Point, normalize, denormalize
+from utils.utils import Point, normalize_position, denormalize_position
+from audio.midi_analysis import MidiAnalysis
 import time
 
 
@@ -16,6 +17,7 @@ class GenerativePhrase:
         else:
             self.shimi = Shimi()
         self.posenet = PoseNet(self.shimi, on_pred=self.on_posenet_prediction)
+        self.face_track = False
         self.update_freq = 0.1
         self.last_update = time.time()
         self.last_pos = 0.5
@@ -47,15 +49,24 @@ class GenerativePhrase:
                     pos = 1 - (nose.x / POSENET_WIDTH)
 
                     # Calculate speed based on how far to move
-                    current_pos = normalize(self.shimi.neck_lr, self.shimi.controller.get_present_speed([self.shimi.neck_lr])[0])
+                    current_pos = normalize_position(self.shimi.neck_lr, self.shimi.controller.get_present_speed([self.shimi.neck_lr])[0])
                     vel = max(MIN_VEL + abs(current_pos - pos) * MAX_VEL, MIN_VEL)
 
                     if abs(self.last_pos - pos) > MOVE_THRESH:
-                        print("Moving to %f at vel %f" % (pos, vel))
-
-                        self.shimi.controller.set_moving_speed({self.shimi.neck_lr: vel})
-                        self.shimi.controller.set_goal_position({self.shimi.neck_lr: denormalize(self.shimi.neck_lr, pos)})
+                        # Only actually move the motors if specified
+                        if self.face_track:
+                            # print("Moving to %f at vel %f" % (pos, vel))
+                            self.shimi.controller.set_moving_speed({self.shimi.neck_lr: vel})
+                            self.shimi.controller.set_goal_position({self.shimi.neck_lr: denormalize_position(self.shimi.neck_lr, pos)})
 
                         self.last_pos = pos
                     
                     self.last_update = time.time()
+
+    def generate(self, path):
+        midi_analysis = MidiAnalysis(path)
+        tempo = midi_analysis.get_tempo()
+
+    def foot_movement(self, tempo):
+        pass
+

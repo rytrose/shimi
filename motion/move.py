@@ -3,8 +3,11 @@ import time
 import utils.utils as utils
 import random
 
-class LinearAccelMove(StoppableThread):
-    def __init__(self, shimi, motor, position, duration, initial_delay=0.0, update_freq=0.1, min_vel=20, normalized_positions=False):
+
+class Move(StoppableThread):
+    def __init__(self, shimi, motor, position, duration, vel_algo='constant', vel_algo_kwarg={}, initial_delay=0.0,
+                 stop_check_freq=0.005,
+                 normalized_positions=False):
         self.shimi = shimi
         self.motor = motor
 
@@ -14,10 +17,23 @@ class LinearAccelMove(StoppableThread):
         self.dur = None
         self.durations = [duration]
 
+        self.vel_algo = None
+        self.vel_algos = [vel_algo]
+
+        self.vel_algo_kwarg = vel_algo_kwarg
+        self.vel_algo_kwargs = [vel_algo_kwarg]
+
+        self.vel_algo_map = {
+            'constant': self.constant_vel,
+            # 'linear_a': self.linear_accel_vel,
+            # 'linear_d': self.linear_decel_vel,
+            'linear_ad': self.linear_accel_decel_vel
+        }
+
         self.delays = [initial_delay]
 
-        self.freq = update_freq
-        self.min_vel = min_vel
+        self.freq = 0.1
+        self.stop_check_freq = stop_check_freq
         self.norm = normalized_positions
 
         StoppableThread.__init__(self,
@@ -31,20 +47,50 @@ class LinearAccelMove(StoppableThread):
     def teardown(self):
         pass
 
-    def move(self):
+    def constant_vel(self, **kwargs):
         start_time = time.time()
         starting_position = self.shimi.controller.get_present_position([self.motor])[0]
 
         # Convert normalized position to degrees
         if self.norm:
-            self.pos = utils.denormalize(self.motor, self.pos)
+            self.pos = utils.denormalize_position(self.motor, self.pos)
+
+        # Calculate constant velocity
+        vel = abs(self.pos - starting_position) / self.dur
+
+        # Set the velocity
+        self.shimi.controller.set_moving_speed({self.motor: vel})
+
+        # Set the goal position
+        self.shimi.controller.set_goal_position({self.motor: self.pos})
+
+        # Sleep off the duration, allowing for stopping
+        while time.time() <= start_time + self.dur and not self.should_stop():
+            time.sleep(self.stop_check_freq)
+
+        # If this was stopped, stop movement at current position
+        if self.should_stop():
+            self.stop_move()
+
+    def linear_accel_decel_vel(self, **kwargs):
+        min_vel = 20
+        if "min_vel" in kwargs:
+            min_vel = kwargs["min_vel"]
+
+        start_time = time.time()
+        starting_position = self.shimi.controller.get_present_position([self.motor])[0]
+
+        # Convert normalized position to degrees
+        if self.norm:
+            self.pos = utils.denormalize_position(self.motor, self.pos)
 
         # Compute maximum velocity, will hit at position / 2
         max_vel = 2 * (
-                (abs((self.pos - starting_position) / 2) - (self.min_vel * (self.dur / 2))) / ((self.dur / 2) ** 2))
+                (abs((self.pos - starting_position) / 2) - (min_vel * (self.dur / 2))) / (
+                (self.dur / 2) ** 2))
 
         # Set the goal position and initial speed of min_vel
-        self.shimi.controller.set_moving_speed({self.motor: self.min_vel})
+        self.shimi.controller.set_moving_speed({self.motor: min_vel})
         self.shimi.controller.set_goal_position({self.motor: self.pos})
 
         # Adjust duration based off of this computation time
@@ -76,7 +122,7 @@ class LinearAccelMove(StoppableThread):
             rel_pos = abs(self.dur / 2 - (time.time() - start_time))
 
             # Calculate the velocity at this point in time, relative to the max_vel at position/2
-            vel = (max_vel * (2 * (1.0 - rel_pos / self.dur) - 1)) + self.min_vel
+            vel = (max_vel * (2 * (1.0 - rel_pos / self.dur) - 1)) + min_vel
             self.shimi.controller.set_moving_speed({self.motor: vel})
 
             # Wait to update again
@@ -84,91 +130,16 @@ class LinearAccelMove(StoppableThread):
 
         # If this was stopped, stop movement at current position
         if self.should_stop():
-            self.shimi.controller.set_goal_position(
-                {self.motor: self.shimi.controller.get_present_position([self.motor])[0]})
+            self.stop_move()
 
-            # Clear all queued moves
-            self.delays = []
-            self.positions = []
-            self.durations = []
+    def stop_move(self):
+        self.shimi.controller.set_goal_position(
+            {self.motor: self.shimi.controller.get_present_position([self.motor])[0]})
 
-
-    def run(self):
-        while len(self.positions) > 0:
-            # Sleep for delay time
-            time.sleep(self.delays.pop(0))
-
-            # Set position and duration for this move
-            self.pos = self.positions.pop(0)
-            self.dur = self.durations.pop(0)
-
-            # Do the move
-            t = time.time()
-            self.move()
-
-    # Add move to queue
-    def add_move(self, position, duration, delay=0.0):
-        self.delays.append(delay)
-        self.positions.append(position)
-        self.durations.append(duration)
-
-class LinearMove(StoppableThread):
-    def __init__(self, shimi, motor, position, duration, initial_delay=0.0, stop_check_freq=0.005, normalized_positions=False):
-        self.shimi = shimi
-        self.motor = motor
-
-        self.pos = None
-        self.positions = [position]
-
-        self.dur = None
-        self.durations = [duration]
-
-        self.delays = [initial_delay]
-
-        self.stop_check_freq = stop_check_freq
-        self.norm = normalized_positions
-
-        StoppableThread.__init__(self,
-                                 setup=self.setup,
-                                 target=self.run,
-                                 teardown=self.teardown)
-
-    def setup(self):
-        pass
-
-    def teardown(self):
-        pass
-
-    def move(self):
-        start_time = time.time()
-        starting_position = self.shimi.controller.get_present_position([self.motor])[0]
-
-        # Convert normalized position to degrees
-        if self.norm:
-            self.pos = utils.denormalize(self.motor, self.pos)
-
-        # Calculate constant velocity
-        vel = abs(self.pos - starting_position) / self.dur
-
-        # Set the velocity
-        self.shimi.controller.set_moving_speed({self.motor: vel})
-
-        # Set the goal position
-        self.shimi.controller.set_goal_position({self.motor: self.pos})
-
-        # Sleep off the duration, allowing for stopping
-        while time.time() <= start_time + self.dur and not self.should_stop():
-            time.sleep(self.stop_check_freq)
-
-        # If this was stopped, stop movement at current position
-        if self.should_stop():
-            self.shimi.controller.set_goal_position(
-                {self.motor: self.shimi.controller.get_present_position([self.motor])[0]})
-
-            # Clear all queued moves
-            self.delays = []
-            self.positions = []
-            self.durations = []
+        # Clear all queued moves
+        self.delays = []
+        self.positions = []
+        self.durations = []
 
     def run(self):
         while len(self.positions) > 0:
@@ -179,14 +150,31 @@ class LinearMove(StoppableThread):
             self.pos = self.positions.pop(0)
             self.dur = self.durations.pop(0)
 
-            # Do the move
-            self.move()
+            if len(self.vel_algos) > 0:
+                self.vel_algo = self.vel_algos.pop(0)
+            if len(self.vel_algo_kwargs) > 0:
+                self.vel_algo_kwarg = self.vel_algo_kwargs.pop(0)
+
+            # Do the move, based on the specified velocity algorithm
+            self.vel_algo_map[self.vel_algo](**self.vel_algo_kwarg)
 
     # Add move to queue
-    def add_move(self, position, duration, delay=0.0):
+    def add_move(self, position, duration, vel_algo=None, vel_algo_kwarg={}, delay=0.0):
         self.delays.append(delay)
         self.positions.append(position)
         self.durations.append(duration)
+
+        # Retain previous velocity algorithm/args
+        if vel_algo:
+            self.vel_algos.append(vel_algo)
+        else:
+            self.vel_algos.append(self.vel_algos[-1])
+
+        if self.vel_algo_kwarg:
+            self.vel_algo_kwargs.append(vel_algo_kwarg)
+        else:
+            self.vel_algo_kwargs.append(self.vel_algo_kwargs[-1])
+
 
 class Thinking(StoppableThread):
     def __init__(self, shimi):
@@ -251,7 +239,7 @@ class Thinking(StoppableThread):
             moves = []
             for motor, pos in self.state_positions[self.state].items():
                 # Define the move
-                move = LinearAccelMove(self.shimi, motor, pos, duration, normalized_positions=True)
+                move = Move(self.shimi, motor, pos, duration, vel_algo='linear_ad', normalized_positions=True)
 
                 # Start moving
                 move.start()
@@ -262,6 +250,7 @@ class Thinking(StoppableThread):
             # Wait for the moves to finish
             for move in moves:
                 move.join()
+
 
 class No(StoppableThread):
     def __init__(self, shimi):
@@ -290,8 +279,8 @@ class No(StoppableThread):
 
         # Shake first direction
         first_dir = directions.pop(random.randrange(2))
-        shake = LinearAccelMove(self.shimi, self.shimi.neck_lr, 0.5 + (first_dir * self.dist), self.speed,
-                        normalized_positions=True)
+        shake = Move(self.shimi, self.shimi.neck_lr, 0.5 + (first_dir * self.dist), self.speed, vel_algo='linear_ad',
+                     normalized_positions=True)
 
         # Shake second direction
         shake.add_move(0.5 + (directions.pop() * self.dist), self.speed / 2)
@@ -302,5 +291,3 @@ class No(StoppableThread):
         # Move
         shake.start()
         shake.join()
-
-

@@ -200,7 +200,7 @@ class PoseNet:
         # Denormalize the position matrix
         for i in range(pos_matrix.shape[0]):
             for j, m in enumerate(self.motors):
-                pos_matrix[i, j] = denormalize(m, pos_matrix[i, j])
+                pos_matrix[i, j] = denormalize_position(m, pos_matrix[i, j])
 
         # Playback
         playback(self.shimi, self.motors, self.recording_duration, self.timestamps, pos_matrix, None, pos_ax, vel_ax)

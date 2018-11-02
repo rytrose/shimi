@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.interpolate import UnivariateSpline
-from motion.move import LinearMove
+from motion.move import Move
 import time
 
 # Constants
@@ -84,7 +84,7 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
     # Start the gesture at the initial position it read
     moves = []
     for i, m in enumerate(motors):
-        move = LinearMove(shimi, m, pos_matrix[0, i], 1.0)
+        move = Move(shimi, m, pos_matrix[0, i], 1.0)
         moves.append(move)
 
     # Start all the moves
