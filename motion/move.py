@@ -7,7 +7,26 @@ import random
 class Move(StoppableThread):
     def __init__(self, shimi, motor, position, duration, vel_algo='constant', vel_algo_kwarg={}, initial_delay=0.0,
                  stop_check_freq=0.005,
-                 normalized_positions=False):
+                 normalized_positions=True):
+        """
+        A threaded process in charge of moving a motor of Shimi over time.
+        :param shimi: provides access to the motor controller
+        :param motor: which motor to move
+        :param position: position to moved to (in normalized position from 0-1 w.r.t. Shimi's range, or degrees if
+            normalized_positions is set to False
+        :param duration: duration the move should take to reach the position
+        :param vel_algo: a key defining the velocity algorithm to use for the move, out of the following:
+            'constant: constant velocity,
+            'linear_ad': constant acceleration to the midpoint of the movement, then constant deceleration to the end,
+            'linear_a': constant acceleration to a point, then constant velocity for the rest of the movement,
+            'linear_d': constant velocity to a point, the constant aceleration for the rest of the movement
+        :param vel_algo_kwarg: keyword arguments if needed for a velocity algorithm
+        :param initial_delay: time to wait before starting the move when the thread is started
+        :param stop_check_freq: for velocity algorithms that are purely constant, how often to check for a stop flag
+        :param normalized_positions: if True, position will be interpreted as a value from 0-1 where 0 is one limit to
+            the motor's range and 1 is the other
+            if False, position is interpreted as degrees
+        """
         self.shimi = shimi
         self.motor = motor
 
@@ -25,8 +44,8 @@ class Move(StoppableThread):
 
         self.vel_algo_map = {
             'constant': self.constant_vel,
-            # 'linear_a': self.linear_accel_vel,
-            # 'linear_d': self.linear_decel_vel,
+            'linear_a': self.linear_accel_vel,
+            'linear_d': self.linear_decel_vel,
             'linear_ad': self.linear_accel_decel_vel
         }
 
@@ -41,13 +60,12 @@ class Move(StoppableThread):
                                  target=self.run,
                                  teardown=self.teardown)
 
-    def setup(self):
-        pass
-
-    def teardown(self):
-        pass
-
     def constant_vel(self, **kwargs):
+        """
+        Executes the move with constant velocity.
+        :param kwargs: not used
+        :return:
+        """
         start_time = time.time()
         starting_position = self.shimi.controller.get_present_position([self.motor])[0]
 
@@ -73,6 +91,13 @@ class Move(StoppableThread):
             self.stop_move()
 
     def linear_accel_decel_vel(self, **kwargs):
+        """
+        Executes the move with constant acceleration to the midpoint of the move, then constant deceleration until
+            the end of the move.
+        :param kwargs:
+            min_vel: the minimum velocity allowed, i.e. starting/ending offset
+        :return:
+        """
         min_vel = 20
         if "min_vel" in kwargs:
             min_vel = kwargs["min_vel"]
@@ -94,6 +119,8 @@ class Move(StoppableThread):
         self.shimi.controller.set_goal_position({self.motor: self.pos})
 
         # Adjust duration based off of this computation time
+        #   Getting the current position can take a non-trivial amount of time
+        #   This got better with the USB2AX controller, but no harm in keeping this logic
         new_dur = self.dur - (time.time() - start_time)
 
         # Increment speed over time at freq
@@ -131,6 +158,12 @@ class Move(StoppableThread):
         # If this was stopped, stop movement at current position
         if self.should_stop():
             self.stop_move()
+
+    def linear_accel_vel(self, **kwargs):
+        pass
+
+    def linear_decel_vel(self, **kwards):
+        pass
 
     def stop_move(self):
         self.shimi.controller.set_goal_position(
