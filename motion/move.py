@@ -127,23 +127,7 @@ class Move(StoppableThread):
         while time.time() <= start_time + new_dur and not self.should_stop():
             # On pause
             if self.should_pause():
-                # Capture moving speed
-                pause_speed = abs(self.shimi.controller.get_present_speed([self.motor])[0])
-
-                # Stop the movement
-                self.shimi.controller.set_goal_position(
-                    {self.motor: self.shimi.controller.get_present_position([self.motor])[0]})
-
-                # Capture what time in the path it paused at
-                elapsed = time.time() - start_time
-
-                # Update the "start time" so that when unpaused, it resumes at the same time in the move
-                while self.should_pause():
-                    start_time = time.time() - (self.dur - elapsed)
-
-                # Continue to goal
-                self.shimi.controller.set_goal_position({self.motor: self.pos})
-                self.shimi.controller.set_moving_speed({self.motor: pause_speed})
+                self.pause_move(start_time)
 
             # Compute the relative position (0 - 1) in the path to goal position
             rel_pos = abs(self.dur / 2 - (time.time() - start_time))
@@ -160,10 +144,88 @@ class Move(StoppableThread):
             self.stop_move()
 
     def linear_accel_vel(self, **kwargs):
-        pass
+        accel_time = 0.5
+        if "accel_time" in kwargs:
+            accel_time = kwargs["accel_time"]
 
-    def linear_decel_vel(self, **kwards):
-        pass
+        # Calculate the max velocity
+        current_pos = self.shimi.controller.get_present_position([self.motor])[0]
+        max_vel = abs(current_pos - self.pos) / (accel_time * self.dur)
+        start_time = time.time()
+
+        # Set the goal position
+        self.shimi.controller.set_goal_position({self.motor: self.pos})
+
+        # Increment speed over time at freq
+        while time.time() <= start_time + self.dur and not self.should_stop():
+            # On pause
+            if self.should_pause():
+                self.pause_move(start_time)
+
+            # Calculate the velocity at this point in time
+            t = time.time() - start_time
+            if t < (accel_time * self.dur):
+                vel = max_vel * (t / (accel_time * self.dur))
+            else:
+                vel = max_vel
+            self.shimi.controller.set_moving_speed({self.motor: vel})
+
+            # Wait to update again
+            time.sleep(self.freq)
+
+        # If this was stopped, stop movement at current position
+        if self.should_stop():
+            self.stop_move()
+
+    def linear_decel_vel(self, **kwargs):
+        decel_time = 0.5
+        if "decel_time" in kwargs:
+            decel_time = kwargs["decel_time"]
+
+        # Calculate the max velocity
+        current_pos = self.shimi.controller.get_present_position([self.motor])[0]
+        max_vel = abs(current_pos - self.pos) / ((1 - decel_time) * self.dur)
+        start_time = time.time()
+
+        # Set the goal position
+        self.shimi.controller.set_goal_position({self.motor: self.pos})
+
+        # Increment speed over time at freq
+        while time.time() <= start_time + self.dur and not self.should_stop():
+            # On pause
+            if self.should_pause():
+                self.pause_move(start_time)
+
+            # Calculate the velocity at this point in time
+            t = time.time() - start_time
+            if t < (decel_time * self.dur):
+                vel = max_vel
+            else:
+                vel = max_vel * ((self.dur - t) / ((1 - decel_time) * self.dur))
+
+            self.shimi.controller.set_moving_speed({self.motor: vel})
+
+            # Wait to update again
+            time.sleep(self.freq)
+
+    def pause_move(self, start_time):
+        # Capture moving speed
+        pause_speed = abs(self.shimi.controller.get_present_speed([self.motor])[0])
+
+        # Stop the movement
+        self.shimi.controller.set_goal_position(
+            {self.motor: self.shimi.controller.get_present_position([self.motor])[0]})
+
+        # Capture what time in the path it paused at
+        elapsed = time.time() - start_time
+
+        # Update the "start time" so that when unpaused, it resumes at the same time in the move
+        while self.should_pause():
+            start_time = time.time() - (self.dur - elapsed)
+
+        # Continue to goal
+        self.shimi.controller.set_goal_position({self.motor: self.pos})
+        self.shimi.controller.set_moving_speed({self.motor: pause_speed})
 
     def stop_move(self):
         self.shimi.controller.set_goal_position(
@@ -191,7 +253,6 @@ class Move(StoppableThread):
             # Do the move, based on the specified velocity algorithm
             self.vel_algo_map[self.vel_algo](**self.vel_algo_kwarg)
 
-    # Add move to queue
     def add_move(self, position, duration, vel_algo=None, vel_algo_kwarg={}, delay=0.0):
         self.delays.append(delay)
         self.positions.append(position)
