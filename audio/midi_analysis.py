@@ -17,7 +17,7 @@ class MidiAnalysis:
         """
         Gets the tempo of the MIDI file.
         :param t: time at which to get the tempo
-        :return: the tempo of the MIDI file at time t in BPS
+        :return: the tempo of the MIDI file at time t in seconds per beat
         """
         tempo_change_times, tempi = self.pm_obj.get_tempo_changes()
 
@@ -32,10 +32,10 @@ class MidiAnalysis:
             # Look ahead for next tempo change
             if i < len(tempo_change_times) - 1:
                 if t >= tempo_change_time and t < tempo_change_times[i + 1]:
-                    return tempo / 60
+                    return 1 / (tempo / 60)
             # If this is the last tempo, return it
             else:
-                return tempo / 60
+                return 1 / (tempo / 60)
 
     def get_normalized_pitch_contour(self):
         """
