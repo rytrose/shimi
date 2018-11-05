@@ -73,7 +73,7 @@ class Shimi:
         # self.robot.goto_position({m.name: STARTING_POSITIONS[m.id] for m in self.robot.motors}, 1.0, wait=True)
         moves = []
         for m in self.all_motors:
-            move = Move(self, m, STARTING_POSITIONS[m], duration)
+            move = Move(self, m, STARTING_POSITIONS[m], duration, normalized_positions=False)
             moves.append(move)
 
         # Start all the moves

@@ -157,6 +157,10 @@ class Move(StoppableThread):
         if "accel_time" in kwargs:
             accel_time = kwargs["accel_time"]
 
+        # Convert normalized position to degrees
+        if self.norm:
+            self.pos = utils.denormalize_position(self.motor, self.pos)
+
         # Calculate the max velocity
         current_pos = self.shimi.controller.get_present_position([self.motor])[0]
         max_vel = abs(current_pos - self.pos) / (accel_time * self.dur)
@@ -204,6 +208,10 @@ class Move(StoppableThread):
         decel_time = 0.5
         if "decel_time" in kwargs:
             decel_time = kwargs["decel_time"]
+
+        # Convert normalized position to degrees
+        if self.norm:
+            self.pos = utils.denormalize_position(self.motor, self.pos)
 
         # Calculate the max velocity
         current_pos = self.shimi.controller.get_present_position([self.motor])[0]
