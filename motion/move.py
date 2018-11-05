@@ -19,7 +19,7 @@ class Move(StoppableThread):
             'constant: constant velocity,
             'linear_ad': constant acceleration to the midpoint of the movement, then constant deceleration to the end,
             'linear_a': constant acceleration to a point, then constant velocity for the rest of the movement,
-            'linear_d': constant velocity to a point, the constant aceleration for the rest of the movement
+            'linear_d': constant velocity to a point, thes constant aceleration for the rest of the movement
         :param vel_algo_kwarg: keyword arguments if needed for a velocity algorithm
         :param initial_delay: time to wait before starting the move when the thread is started
         :param stop_check_freq: for velocity algorithms that are purely constant, how often to check for a stop flag
@@ -98,6 +98,7 @@ class Move(StoppableThread):
             min_vel: the minimum velocity allowed, i.e. starting/ending offset
         :return:
         """
+
         min_vel = 20
         if "min_vel" in kwargs:
             min_vel = kwargs["min_vel"]
@@ -144,6 +145,14 @@ class Move(StoppableThread):
             self.stop_move()
 
     def linear_accel_vel(self, **kwargs):
+        """
+        Executes the move with constant acceleration over time until a point in the duration, then remains at a
+            constant velocity for the rest of the move.
+        :param kwargs:
+            accel_time: a value from 0-1 representing the portion of the move to accelerate for
+        :return:
+        """
+
         accel_time = 0.5
         if "accel_time" in kwargs:
             accel_time = kwargs["accel_time"]
@@ -168,6 +177,12 @@ class Move(StoppableThread):
                 vel = max_vel * (t / (accel_time * self.dur))
             else:
                 vel = max_vel
+
+            # Prevent vel == 0
+            if vel < 1:
+                vel = 1
+
+            # Update velocity
             self.shimi.controller.set_moving_speed({self.motor: vel})
 
             # Wait to update again
@@ -178,6 +193,14 @@ class Move(StoppableThread):
             self.stop_move()
 
     def linear_decel_vel(self, **kwargs):
+        """
+        Executes the move with constant velocity over time until a point in the duration, then decelerates at
+            constant deceleration for the rest of the move.
+        :param kwargs:
+            decel_time: a value from 0-1 representing the portion of the move at constant velocity
+        :return:
+        """
+
         decel_time = 0.5
         if "decel_time" in kwargs:
             decel_time = kwargs["decel_time"]
@@ -203,10 +226,19 @@ class Move(StoppableThread):
             else:
                 vel = max_vel * ((self.dur - t) / ((1 - decel_time) * self.dur))
 
+            # Prevent vel == 0
+            if vel < 1:
+                vel = 1
+
+            # Update velocity
             self.shimi.controller.set_moving_speed({self.motor: vel})
 
             # Wait to update again
             time.sleep(self.freq)
+
+            # If this was stopped, stop movement at current position
+            if self.should_stop():
+                self.stop_move()
 
     def pause_move(self, start_time):
         # Capture moving speed
