@@ -81,7 +81,9 @@ class MidiAnalysis:
         Gets the length of the piece in seconds.
         :return: a float of the length in seconds
         """
-        return self.pm_obj.instruments[0].get_end_time()
+        num_beats = len(self.pm_obj.get_beats())
+        tempo = self.get_tempo()
+        return (num_beats * tempo) + ((4 - (num_beats % 4)) * tempo)
 
     def play(self):
         out = self.pm_obj.synthesize()

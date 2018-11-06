@@ -50,33 +50,52 @@ class GenerativePhrase:
                     pos = 1 - (nose.x / POSENET_WIDTH)
 
                     # Calculate speed based on how far to move
-                    current_pos = normalize_position(self.shimi.neck_lr, self.shimi.controller.get_present_speed([self.shimi.neck_lr])[0])
+                    current_pos = normalize_position(self.shimi.neck_lr,
+                                                     self.shimi.controller.get_present_speed([self.shimi.neck_lr])[0])
                     vel = max(MIN_VEL + abs(current_pos - pos) * MAX_VEL, MIN_VEL)
 
                     if abs(self.last_pos - pos) > MOVE_THRESH:
                         # Only actually move the motors if specified
                         if self.face_track:
-                            # print("Moving to %f at vel %f" % (pos, vel))
                             self.shimi.controller.set_moving_speed({self.shimi.neck_lr: vel})
-                            self.shimi.controller.set_goal_position({self.shimi.neck_lr: denormalize_position(self.shimi.neck_lr, pos)})
+                            self.shimi.controller.set_goal_position(
+                                {self.shimi.neck_lr: denormalize_position(self.shimi.neck_lr, pos)})
 
                         self.last_pos = pos
-                    
+
                     self.last_update = time.time()
 
     def generate(self, path, valence, arousal):
+        # Analyze the MIDI
         self.midi_analysis = MidiAnalysis(path)
         tempo = self.midi_analysis.get_tempo()
         length = self.midi_analysis.get_length()
+
+        # Create the motor moves
+        moves = []
         foot = self.foot_movement(tempo, length, valence, arousal)
-        foot.start()
+        moves.append(foot)
+
+        # Start all the moves
+        for move in moves:
+            move.start()
+
+        # For testing, play the MIDI file back
         self.midi_analysis.play()
-        foot.join()
+
+        # Wait for all the moves to stop
+        for move in moves:
+            move.join()
+
+    def torso_neck_movement(self, tempo, length, valence, arousal):
+        pass
 
     def foot_movement(self, tempo, length, valence, arousal):
         # Calculate how often it taps its foot based on arousal
         quantized_arousals = [-1, -0.2, 0, 1]
         quantized_arousal = quantize(arousal, quantized_arousals)
+
+        # Higher arousal --> smaller subdivision of tapping
         beat_periods = [4 * tempo, 2 * tempo, tempo, 0.5 * tempo]
         beat_period = beat_periods[quantized_arousals.index(quantized_arousal)]
 
@@ -85,20 +104,38 @@ class GenerativePhrase:
         move_wait = 0.0
 
         if valence < 0:
-            # If valence is negative, cut off the tap, and make sharp
+            # Lower valence --> shorter movement, faster
             neg_norm = 1 + valence
             # Make sure it moves at least 0.2
             move_dist = denormalize_to_range(neg_norm, 0.2, 1.0)
+            # Make sure it's moving for at least 0.1s
             move_dur = denormalize_to_range(neg_norm, 0.1, 1.0) * move_dur
             move_wait = (beat_period / 2) - move_dur
 
-        move = Move(self.shimi, self.shimi.foot, move_dist, move_dur)
-        move.add_move(0.0, move_dur, delay=move_wait)
+        # Params for the linear accel/decel moves
+        up_change_time = 0.7
+        down_change_time = 0.4
+
+        # Wait half of a beat to start, so the ictus is on foot down
+        move = Move(self.shimi, self.shimi.foot, move_dist, move_dur,
+                    vel_algo='linear_a',
+                    vel_algo_kwarg={'change_time': up_change_time},
+                    freq=0.04, initial_delay=(beat_period / 2))
+        move.add_move(0.0, move_dur,
+                      vel_algo='linear_d',
+                      vel_algo_kwarg={'change_time': down_change_time},
+                      delay=move_wait)
         t = 2 * (move_dur + move_wait)
+
         while t < length:
-            move.add_move(move_dist, move_dur, delay=move_wait)
-            move.add_move(0.0, move_dur, delay=move_wait)
+            move.add_move(move_dist, move_dur,
+                          vel_algo='linear_a',
+                          vel_algo_kwarg={'change_time': up_change_time},
+                          delay=move_wait)
+            move.add_move(0.0, move_dur,
+                          vel_algo='linear_d',
+                          vel_algo_kwarg={'change_time': down_change_time},
+                          delay=move_wait)
             t += 2 * (move_dur + move_wait)
 
         return move
-

@@ -3,9 +3,11 @@ import time
 import utils.utils as utils
 import random
 
+VERBOSE = False
 
 class Move(StoppableThread):
     def __init__(self, shimi, motor, position, duration, vel_algo='constant', vel_algo_kwarg={}, initial_delay=0.0,
+                 freq=0.1,
                  stop_check_freq=0.005,
                  normalized_positions=True):
         """
@@ -51,7 +53,7 @@ class Move(StoppableThread):
 
         self.delays = [initial_delay]
 
-        self.freq = 0.1
+        self.freq = freq
         self.stop_check_freq = stop_check_freq
         self.norm = normalized_positions
 
@@ -67,6 +69,7 @@ class Move(StoppableThread):
         :return:
         """
         start_time = time.time()
+
         starting_position = self.shimi.controller.get_present_position([self.motor])[0]
 
         # Convert normalized position to degrees
@@ -86,6 +89,10 @@ class Move(StoppableThread):
         while time.time() <= start_time + self.dur and not self.should_stop():
             time.sleep(self.stop_check_freq)
 
+        if VERBOSE:
+            # Print time statistics
+            self.time_stats(start_time, self.dur)
+
         # If this was stopped, stop movement at current position
         if self.should_stop():
             self.stop_move()
@@ -98,12 +105,12 @@ class Move(StoppableThread):
             min_vel: the minimum velocity allowed, i.e. starting/ending offset
         :return:
         """
+        start_time = time.time()
 
         min_vel = 20
         if "min_vel" in kwargs:
             min_vel = kwargs["min_vel"]
 
-        start_time = time.time()
         starting_position = self.shimi.controller.get_present_position([self.motor])[0]
 
         # Convert normalized position to degrees
@@ -128,7 +135,7 @@ class Move(StoppableThread):
         while time.time() <= start_time + new_dur and not self.should_stop():
             # On pause
             if self.should_pause():
-                self.pause_move(start_time)
+                start_time = self.pause_move(start_time)
 
             # Compute the relative position (0 - 1) in the path to goal position
             rel_pos = abs(self.dur / 2 - (time.time() - start_time))
@@ -140,6 +147,10 @@ class Move(StoppableThread):
             # Wait to update again
             time.sleep(self.freq)
 
+        if VERBOSE:
+            # Print time statistics
+            self.time_stats(start_time, self.dur)
+
         # If this was stopped, stop movement at current position
         if self.should_stop():
             self.stop_move()
@@ -149,13 +160,14 @@ class Move(StoppableThread):
         Executes the move with constant acceleration over time until a point in the duration, then remains at a
             constant velocity for the rest of the move.
         :param kwargs:
-            accel_time: a value from 0-1 representing the portion of the move to accelerate for
+            change_time: a value from 0-1 representing the portion of the move to accelerate for
         :return:
         """
+        start_time = time.time()
 
-        accel_time = 0.5
-        if "accel_time" in kwargs:
-            accel_time = kwargs["accel_time"]
+        change_time = 0.5
+        if "change_time" in kwargs:
+            change_time = kwargs["change_time"]
 
         # Convert normalized position to degrees
         if self.norm:
@@ -163,8 +175,7 @@ class Move(StoppableThread):
 
         # Calculate the max velocity
         current_pos = self.shimi.controller.get_present_position([self.motor])[0]
-        max_vel = abs(current_pos - self.pos) / (accel_time * self.dur)
-        start_time = time.time()
+        max_vel = abs(current_pos - self.pos) / (change_time * self.dur)
 
         # Set the goal position
         self.shimi.controller.set_goal_position({self.motor: self.pos})
@@ -173,12 +184,12 @@ class Move(StoppableThread):
         while time.time() <= start_time + self.dur and not self.should_stop():
             # On pause
             if self.should_pause():
-                self.pause_move(start_time)
+                start_time = self.pause_move(start_time)
 
             # Calculate the velocity at this point in time
             t = time.time() - start_time
-            if t < (accel_time * self.dur):
-                vel = max_vel * (t / (accel_time * self.dur))
+            if t < (change_time * self.dur):
+                vel = max_vel * (t / (change_time * self.dur))
             else:
                 vel = max_vel
 
@@ -189,8 +200,20 @@ class Move(StoppableThread):
             # Update velocity
             self.shimi.controller.set_moving_speed({self.motor: vel})
 
-            # Wait to update again
-            time.sleep(self.freq)
+            # Sleep only as much as there is time left
+            time_left = (start_time + self.dur) - time.time()
+            if self.freq > time_left:
+                if time_left > 0:
+                    time.sleep(time_left)
+                else:
+                    break
+            else:
+                # Wait to update again
+                time.sleep(self.freq)
+
+        if VERBOSE:
+            # Print time statistics
+            self.time_stats(start_time, self.dur)
 
         # If this was stopped, stop movement at current position
         if self.should_stop():
@@ -201,13 +224,14 @@ class Move(StoppableThread):
         Executes the move with constant velocity over time until a point in the duration, then decelerates at
             constant deceleration for the rest of the move.
         :param kwargs:
-            decel_time: a value from 0-1 representing the portion of the move at constant velocity
+            change_time: a value from 0-1 representing the portion of the move at constant velocity
         :return:
         """
+        start_time = time.time()
 
-        decel_time = 0.5
-        if "decel_time" in kwargs:
-            decel_time = kwargs["decel_time"]
+        change_time = 0.5
+        if "change_time" in kwargs:
+            change_time = kwargs["change_time"]
 
         # Convert normalized position to degrees
         if self.norm:
@@ -215,8 +239,7 @@ class Move(StoppableThread):
 
         # Calculate the max velocity
         current_pos = self.shimi.controller.get_present_position([self.motor])[0]
-        max_vel = abs(current_pos - self.pos) / ((1 - decel_time) * self.dur)
-        start_time = time.time()
+        max_vel = abs(current_pos - self.pos) / ((1 - change_time) * self.dur)
 
         # Set the goal position
         self.shimi.controller.set_goal_position({self.motor: self.pos})
@@ -225,14 +248,14 @@ class Move(StoppableThread):
         while time.time() <= start_time + self.dur and not self.should_stop():
             # On pause
             if self.should_pause():
-                self.pause_move(start_time)
+                start_time = self.pause_move(start_time)
 
             # Calculate the velocity at this point in time
             t = time.time() - start_time
-            if t < (decel_time * self.dur):
+            if t < (change_time * self.dur):
                 vel = max_vel
             else:
-                vel = max_vel * ((self.dur - t) / ((1 - decel_time) * self.dur))
+                vel = max_vel * ((self.dur - t) / ((1 - change_time) * self.dur))
 
             # Prevent vel == 0
             if vel < 1:
@@ -241,12 +264,24 @@ class Move(StoppableThread):
             # Update velocity
             self.shimi.controller.set_moving_speed({self.motor: vel})
 
-            # Wait to update again
-            time.sleep(self.freq)
+            # Sleep only as much as there is time left
+            time_left = (start_time + self.dur) - time.time()
+            if self.freq > time_left:
+                if time_left > 0:
+                    time.sleep(time_left)
+                else:
+                    break
+            else:
+                # Wait to update again
+                time.sleep(self.freq)
 
-            # If this was stopped, stop movement at current position
-            if self.should_stop():
-                self.stop_move()
+        if VERBOSE:
+            # Print time statistics
+            self.time_stats(start_time, self.dur)
+
+        # If this was stopped, stop movement at current position
+        if self.should_stop():
+            self.stop_move()
 
     def pause_move(self, start_time):
         # Capture moving speed
@@ -266,6 +301,8 @@ class Move(StoppableThread):
         # Continue to goal
         self.shimi.controller.set_goal_position({self.motor: self.pos})
         self.shimi.controller.set_moving_speed({self.motor: pause_speed})
+
+        return start_time
 
     def stop_move(self):
         self.shimi.controller.set_goal_position(
@@ -293,6 +330,10 @@ class Move(StoppableThread):
             # Do the move, based on the specified velocity algorithm
             self.vel_algo_map[self.vel_algo](**self.vel_algo_kwarg)
 
+    def time_stats(self, start_time, duration):
+        time_taken = time.time() - start_time
+        print("duration: %.4f\ntime taken: %.4f\n difference: %.4f" % (duration, time_taken, duration - time_taken))
+
     def add_move(self, position, duration, vel_algo=None, vel_algo_kwarg={}, delay=0.0):
         self.delays.append(delay)
         self.positions.append(position)
@@ -304,7 +345,7 @@ class Move(StoppableThread):
         else:
             self.vel_algos.append(self.vel_algos[-1])
 
-        if self.vel_algo_kwarg:
+        if vel_algo_kwarg:
             self.vel_algo_kwargs.append(vel_algo_kwarg)
         else:
             self.vel_algo_kwargs.append(self.vel_algo_kwargs[-1])
