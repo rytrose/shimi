@@ -1,4 +1,5 @@
 from config.definitions import *
+import bisect
 import time
 
 
@@ -21,6 +22,12 @@ def countdown(duration):
         sleep_time = min(1.0, waiting)
         waiting -= sleep_time
         time.sleep(sleep_time)
+
+def quantize(num, quant):
+    mids = [(quant[i] + quant[i + 1]) / 2.0
+            for i in range(len(quant) - 1)]
+    ind = bisect.bisect_right(mids, num)
+    return quant[ind]
 
 
 # A class to abstract a point from PoseNet

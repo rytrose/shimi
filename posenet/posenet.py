@@ -18,6 +18,16 @@ INTERP_FREQ = 0.1
 
 class PoseNet:
     def __init__(self, shimi, on_pred=None):
+        try:
+            subprocess.check_output(['ls', '/usr/bin/python3.5'])
+        except:
+            print("Python 3.5 unavailable, likely unavailable to use Tensorflow, returning None.")
+            self.valid = False
+            return
+
+        # Has access to python3.5, likely Tensorflow
+        self.valid = True
+
         # Reference to Shimi and motor controller
         self.shimi = shimi
 

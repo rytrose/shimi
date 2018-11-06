@@ -5,8 +5,9 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from shimi import Shimi
 from posenet.posenet import PoseNet
-from utils.utils import Point, normalize_position, denormalize_position
+from utils.utils import Point, normalize_position, denormalize_position, denormalize_to_range, quantize
 from audio.midi_analysis import MidiAnalysis
+from motion.move import Move
 import time
 
 
@@ -63,10 +64,41 @@ class GenerativePhrase:
                     
                     self.last_update = time.time()
 
-    def generate(self, path):
-        midi_analysis = MidiAnalysis(path)
-        tempo = midi_analysis.get_tempo()
+    def generate(self, path, valence, arousal):
+        self.midi_analysis = MidiAnalysis(path)
+        tempo = self.midi_analysis.get_tempo()
+        length = self.midi_analysis.get_length()
+        foot = self.foot_movement(tempo, length, valence, arousal)
+        foot.start()
+        self.midi_analysis.play()
+        foot.join()
 
-    def foot_movement(self, tempo):
-        pass
+    def foot_movement(self, tempo, length, valence, arousal):
+        # Calculate how often it taps its foot based on arousal
+        quantized_arousals = [-1, -0.2, 0, 1]
+        quantized_arousal = quantize(arousal, quantized_arousals)
+        beat_periods = [4 * tempo, 2 * tempo, tempo, 0.5 * tempo]
+        beat_period = beat_periods[quantized_arousals.index(quantized_arousal)]
+
+        move_dist = 1.0
+        move_dur = beat_period / 2
+        move_wait = 0.0
+
+        if valence < 0:
+            # If valence is negative, cut off the tap, and make sharp
+            neg_norm = 1 + valence
+            # Make sure it moves at least 0.2
+            move_dist = denormalize_to_range(neg_norm, 0.2, 1.0)
+            move_dur = denormalize_to_range(neg_norm, 0.1, 1.0) * move_dur
+            move_wait = (beat_period / 2) - move_dur
+
+        move = Move(self.shimi, self.shimi.foot, move_dist, move_dur)
+        move.add_move(0.0, move_dur, delay=move_wait)
+        t = 2 * (move_dur + move_wait)
+        while t < length:
+            move.add_move(move_dist, move_dur, delay=move_wait)
+            move.add_move(0.0, move_dur, delay=move_wait)
+            t += 2 * (move_dur + move_wait)
+
+        return move
 
