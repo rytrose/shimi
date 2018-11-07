@@ -2,7 +2,7 @@ from pypot.utils import StoppableThread
 from matt.SpeechRecognizer import *
 from nltk.corpus import stopwords
 from nltk.stem.snowball import EnglishStemmer
-from audio.audio import play_opera, play_outkast
+from audio.audio_demos import play_opera, play_outkast
 from motion.move import Thinking, No
 import time
 
