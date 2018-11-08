@@ -192,7 +192,6 @@ class PoseNetPython():
                     time_elapsed = time.time() - start_time
                     if time_elapsed > 1:
                         fps = frames_completed / time_elapsed
-                        print("FPS: %f" % fps)
                         frames_completed = 0
                         start_time = time.time()
 
