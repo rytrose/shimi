@@ -4,6 +4,7 @@ from utils.utils import normalize_position
 import time
 import utils.utils as utils
 import random
+from numpy import cumsum
 
 VERBOSE = False
 
@@ -352,6 +353,13 @@ class Move(StoppableThread):
             self.vel_algo_kwargs.append(vel_algo_kwarg)
         else:
             self.vel_algo_kwargs.append(self.vel_algo_kwargs[-1])
+
+    def get_timestamps(self):
+        if len(self.durations) == 0:
+            return []
+        else:
+            return cumsum(self.durations)
+
 
 
 class Thinking(StoppableThread):
