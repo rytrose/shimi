@@ -7,10 +7,10 @@ FOOT = 5
 
 # Starting positions of motors
 STARTING_POSITIONS = {
-    TORSO: 10.0,
-    NECK_LR: -21.6,
-    NECK_UD: -3.0,
-    PHONE: -11.85,
+    TORSO: 10.0, # 0.0 down, 1.0 up
+    NECK_LR: -21.6, # 0.0 left, 1.0 right
+    NECK_UD: -3.0, # 0.0 up, 1.0 down
+    PHONE: -11.85, # 0.0 down, 1.0 up
     FOOT: 5.41
 }
 

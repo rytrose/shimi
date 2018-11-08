@@ -1,9 +1,12 @@
 from pypot.utils import StoppableThread
+from config.definitions import STARTING_POSITIONS
+from utils.utils import normalize_position
 import time
 import utils.utils as utils
 import random
 
 VERBOSE = False
+
 
 class Move(StoppableThread):
     def __init__(self, shimi, motor, position, duration, vel_algo='constant', vel_algo_kwarg={}, initial_delay=0.0,
@@ -352,7 +355,7 @@ class Move(StoppableThread):
 
 
 class Thinking(StoppableThread):
-    def __init__(self, shimi):
+    def __init__(self, shimi, **kwargs):
         # Seed RNG
         random.seed()
 
@@ -428,7 +431,7 @@ class Thinking(StoppableThread):
 
 
 class No(StoppableThread):
-    def __init__(self, shimi):
+    def __init__(self, shimi, **kwargs):
         self.shimi = shimi
 
         StoppableThread.__init__(self,
@@ -466,3 +469,39 @@ class No(StoppableThread):
         # Move
         shake.start()
         shake.join()
+
+
+class Alert(StoppableThread):
+    def __init__(self, shimi, **kwargs):
+        self.shimi = shimi
+
+        StoppableThread.__init__(self,
+                                 setup=self.setup,
+                                 target=self.run,
+                                 teardown=self.teardown)
+
+    def run(self):
+        # Move forward and lift head up
+        torso = Move(self.shimi, self.shimi.torso,
+                     normalize_position(self.shimi.torso, STARTING_POSITIONS[self.shimi.torso]) - 0.1,
+                     0.5,
+                     vel_algo='constant',
+                     normalized_positions=True)
+
+        neck_ud = Move(self.shimi, self.shimi.neck_ud,
+                     normalize_position(self.shimi.neck_ud, STARTING_POSITIONS[self.shimi.neck_ud]) - 0.3,
+                     0.5,
+                     vel_algo='constant',
+                     normalized_positions=True)
+
+        torso.start()
+        neck_ud.start()
+
+        torso.join()
+        neck_ud.join()
+
+    def stop(self, wait=True):
+        self.shimi.initial_position()
+        super().stop(wait)
+
+

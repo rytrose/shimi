@@ -85,6 +85,32 @@ class MidiAnalysis:
         tempo = self.get_tempo()
         return (num_beats * tempo) + ((4 - (num_beats % 4)) * tempo)
 
+    def get_shortest_note_length(self):
+        """
+        Gets the length of the shortest note that occurs in the piece, in seconds.
+        :return: a float of the length of the shortest note in seconds
+        """
+        shortest_length = 99999
+        for note in self.pm_obj.instruments[0].notes:
+            length = note.end - note.start
+            if length < shortest_length:
+                shortest_length = length
+
+        return shortest_length
+
+    def get_longest_note_length(self):
+        """
+        Gets the length of the longest note that occurs in the piece, in seconds.
+        :return: a float of the length of the longest note in seconds
+        """
+        longest_length = -1
+        for note in self.pm_obj.instruments[0].notes:
+            length = note.end - note.start
+            if length > longest_length:
+                longest_length = length
+
+        return longest_length
+
     def play(self):
         out = self.pm_obj.synthesize()
         sd.play(out)
