@@ -4,7 +4,20 @@ from pypot.utils import StoppableThread
 from shimi import Shimi
 from audio.audio_demos import play_opera, play_outkast
 from motion.move import No
+from motion.generative_phrase import GenerativePhrase
 import inspect
+import random
+
+phrase_generator = GenerativePhrase(shimi={})
+
+
+def generate_phrase(shimi, phrase, path):
+    phrase_generator.shimi = shimi
+    rand_valence = random.choice([-1, 1]) * random.random()
+    rand_arousal = random.choice([-1, 1]) * random.random()
+    print("VALENCE: %.4f, AROUSAL: %.4f" % (rand_valence, rand_arousal))
+    phrase_generator.generate(path, rand_valence, rand_arousal)
+
 
 # N.B. All callbacks should take one argument, an instance of Shimi
 PHRASE_CALLBACKS = [
@@ -20,7 +33,11 @@ PHRASE_CALLBACKS = [
         "triggers": ["justin bieber"],
         "callback": No
     },
-
+    {
+        "triggers": ["test speak", "say something"],
+        "callback": generate_phrase,
+        "args": ("audio/test.mid",)
+    }
 ]
 
 
@@ -104,11 +121,14 @@ class WakeWord(StoppableThread):
                             found_callback = True
                             print("Calling:", phrase_callback["callback"])
                             try:
-                                #
                                 if self.is_thread(phrase_callback["callback"]):
                                     phrase_callback["callback"](self.shimi, phrase=phrase).start()
                                 else:
-                                    phrase_callback["callback"](phrase)
+                                    # HACK FOR DEMO
+                                    if "args" in phrase_callback:
+                                        phrase_callback["callback"](self.shimi, phrase, *phrase_callback["args"])
+                                    else:
+                                        phrase_callback["callback"](phrase)
                             except Exception as e:
                                 print("Callback failed:", e)
                                 break

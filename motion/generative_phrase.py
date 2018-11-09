@@ -15,7 +15,7 @@ import numpy as np
 
 class GenerativePhrase:
     def __init__(self, shimi=None):
-        if shimi:
+        if shimi is not None:
             self.shimi = shimi
         else:
             self.shimi = Shimi()
