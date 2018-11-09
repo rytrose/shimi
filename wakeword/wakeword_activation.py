@@ -7,9 +7,9 @@ from motion.move import No
 from motion.generative_phrase import GenerativePhrase
 import inspect
 import random
+import time
 
 phrase_generator = GenerativePhrase(shimi={})
-
 
 def generate_phrase(shimi, phrase, path):
     phrase_generator.shimi = shimi
@@ -56,7 +56,8 @@ class WakeWord(StoppableThread):
         self.on_wake = on_wake
         self.on_phrase = on_phrase
         self.porcupine = PorcupineReader()
-        self.speech_recognizer = SpeechRecognizer(respeaker=respeaker)
+        self.respeaker = respeaker
+        self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker)
 
         StoppableThread.__init__(self,
                                  setup=self.setup,
@@ -128,7 +129,7 @@ class WakeWord(StoppableThread):
                                     if "args" in phrase_callback:
                                         phrase_callback["callback"](self.shimi, phrase, *phrase_callback["args"])
                                     else:
-                                        phrase_callback["callback"](phrase)
+                                        phrase_callback["callback"](self.shimi)
                             except Exception as e:
                                 print("Callback failed:", e)
                                 break
