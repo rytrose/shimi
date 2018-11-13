@@ -1,5 +1,10 @@
+import sys
+import os
+
+# Add this dir to path
+sys.path.insert(1, os.path.join(sys.path[0], '.'))
+
 from matt.SpeechRecognizer import SpeechRecognizer
-from matt.PorcupineReader import PorcupineReader
 from pypot.utils import StoppableThread
 from shimi import Shimi
 from audio.audio_demos import play_opera, play_outkast
@@ -7,9 +12,10 @@ from motion.move import No
 from motion.generative_phrase import GenerativePhrase
 import inspect
 import random
-import time
+import wakeword.snowboydecoder as snowboydecoder
 
 phrase_generator = GenerativePhrase(shimi={})
+
 
 def generate_phrase(shimi, phrase, path):
     phrase_generator.shimi = shimi
@@ -42,7 +48,8 @@ PHRASE_CALLBACKS = [
 
 
 class WakeWord(StoppableThread):
-    def __init__(self, shimi=None, on_wake=None, on_phrase=None, respeaker=False):
+    def __init__(self, shimi=None, model="wakeword/resources/models/Hey-Shimi2.pmdl", on_wake=None, on_phrase=None,
+                 respeaker=False):
         """
         Defines a threaded process to manage using the "hey Shimi" wakeword, and making appropriate callbacks.
         :param on_wake: a non-blocking function or StoppableThread to be called when the wakeword is heard
@@ -55,7 +62,8 @@ class WakeWord(StoppableThread):
             self.shimi = Shimi()
         self.on_wake = on_wake
         self.on_phrase = on_phrase
-        self.porcupine = PorcupineReader()
+        self.snowboy = snowboydecoder.HotwordDetector(model, sensitivity=0.5)
+        self.hotword_detection = False
         self.respeaker = respeaker
         self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker)
 
@@ -70,83 +78,96 @@ class WakeWord(StoppableThread):
         print("...finished.")
 
     def run(self):
+        print("Listening for hotword...")
+        self.start_hotword_detection()
+
         while not self.should_stop():
-            # Blocks until key word "hey Shimi" is spoken
-            print("Listening for key word...")
-            res = self.porcupine.waitForKeyword()
+            paused = False
+            while self.should_pause():
+                paused = True
+                print("Pausing hotword detection.")
+                self.hotword_detection = False
 
-            # Cancelled
-            if res is False:
-                break
+            if paused:
+                paused = False
+                print("Resuming hotword detection.")
+                self.hotword_detection = True
 
-            # Call wake function if it exists
-            # Handle thread
-            thread = None
-            is_thread = False
-            if self.on_wake:
-                is_thread = self.is_thread(self.on_wake)
-                if is_thread:
-                    thread = self.on_wake(self.shimi)
-                    thread.start()
-                else:
-                    self.on_wake(self.shimi)
+        self.snowboy.terminate()
 
-            # Start to listen for a phrase
-            phrase = self.speech_recognizer.listenForPhrase()
+    def start_hotword_detection(self):
+        self.hotword_detection = True
+        self.snowboy.start(detected_callback=self.on_hotword,
+               interrupt_check=self.hotword_status,
+               sleep_time=0.03)
 
-            # Phrase listening done, stop on_wake if thread
+    def stop_hotword_detection(self):
+        self.hotword_detection = False
+
+    def hotword_status(self):
+        return not self.hotword_detection
+
+    def on_hotword(self):
+        # Call wake function if it exists
+        # Handle thread
+        thread = None
+        is_thread = False
+        if self.on_wake:
+            is_thread = self.is_thread(self.on_wake)
             if is_thread:
-                # Stop thread
-                thread.stop()
-
-                # Wait for it to be done if it isn't
-                if thread._thread.is_alive():
-                    thread.join()
-
-            if phrase is None:
-                # TODO: handle nothing said/heard
-                continue
-
-            # Make phrase lowercase
-            phrase = phrase.lower()
-
-            # Pass the phrase to callback
-            if self.on_phrase:
-                self.on_phrase(phrase)
+                thread = self.on_wake(self.shimi)
+                thread.start()
             else:
-                # Check callbacks for trigger words
-                found_callback = False
-                for phrase_callback in PHRASE_CALLBACKS:
-                    for trigger in phrase_callback["triggers"]:
-                        if trigger in phrase:
-                            found_callback = True
-                            print("Calling:", phrase_callback["callback"])
-                            try:
-                                if self.is_thread(phrase_callback["callback"]):
-                                    phrase_callback["callback"](self.shimi, phrase=phrase).start()
-                                else:
-                                    # HACK FOR DEMO
-                                    if "args" in phrase_callback:
-                                        phrase_callback["callback"](self.shimi, phrase, *phrase_callback["args"])
-                                    else:
-                                        phrase_callback["callback"](self.shimi)
-                            except Exception as e:
-                                print("Callback failed:", e)
-                                break
+                self.on_wake(self.shimi)
 
-                            # Only call the first trigger
+        # Start to listen for a phrase
+        phrase = self.speech_recognizer.listenForPhrase()
+
+        # Phrase listening done, stop on_wake if thread
+        if is_thread:
+            # Stop thread
+            thread.stop()
+
+            # Wait for it to be done if it isn't
+            if thread._thread.is_alive():
+                thread.join()
+
+        if phrase is None:
+            # TODO: handle nothing said/heard
+            return
+
+        # Make phrase lowercase
+        phrase = phrase.lower()
+
+        # Pass the phrase to callback
+        if self.on_phrase:
+            self.on_phrase(phrase)
+        else:
+            # Check callbacks for trigger words
+            found_callback = False
+            for phrase_callback in PHRASE_CALLBACKS:
+                for trigger in phrase_callback["triggers"]:
+                    if trigger in phrase:
+                        found_callback = True
+                        print("Calling:", phrase_callback["callback"])
+                        try:
+                            if self.is_thread(phrase_callback["callback"]):
+                                phrase_callback["callback"](self.shimi, phrase=phrase).start()
+                            else:
+                                # HACK FOR DEMO
+                                if "args" in phrase_callback:
+                                    phrase_callback["callback"](self.shimi, phrase, *phrase_callback["args"])
+                                else:
+                                    phrase_callback["callback"](self.shimi)
+                        except Exception as e:
+                            print("Callback failed:", e)
                             break
 
-                if not found_callback:
-                    print("Heard \"%s\", but didn't have any function to pass it to." % phrase)
+                        # Only call the first trigger
+                        break
 
-        # Reinitialize porcupine
-        self.porcupine = PorcupineReader(input_device_index=1)
-        print("No longer listening.")
-
-    def stop(self, wait=True):
-        self.porcupine.stop = True
-        super().stop(wait)
+            if not found_callback:
+                print("Heard \"%s\", but didn't have any function to pass it to." % phrase)
 
     def is_thread(self, obj):
         try:

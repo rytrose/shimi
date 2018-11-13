@@ -2,7 +2,7 @@
 
 import collections
 import pyaudio
-import snowboydetect
+import wakeword.snowboydetect as snowboydetect
 import time
 import wave
 import os
@@ -12,7 +12,7 @@ from contextlib import contextmanager
 
 logging.basicConfig()
 logger = logging.getLogger("snowboy")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 TOP_DIR = os.path.dirname(os.path.abspath(__file__))
 
 RESOURCE_FILE = os.path.join(TOP_DIR, "resources/common.res")
