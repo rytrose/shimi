@@ -8,3 +8,4 @@ venv/
 checkpoints/
 spotify/.cache-*
 spotify/client_credentials.py
+_snowboydetect.so
