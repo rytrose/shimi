@@ -1,9 +1,4 @@
-import sys
-import os
-
-# Add this dir to path
-sys.path.insert(1, os.path.join(sys.path[0], '.'))
-
+import time
 from matt.SpeechRecognizer import SpeechRecognizer
 from pypot.utils import StoppableThread
 from shimi import Shimi
@@ -65,7 +60,7 @@ class WakeWord(StoppableThread):
         self.snowboy = snowboydecoder.HotwordDetector(model, sensitivity=0.5)
         self.hotword_detection = False
         self.respeaker = respeaker
-        self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker)
+        self.speech_recognizer = SpeechRecognizer(mic_index=4) #respeaker=self.respeaker)
 
         StoppableThread.__init__(self,
                                  setup=self.setup,
@@ -108,6 +103,9 @@ class WakeWord(StoppableThread):
         return not self.hotword_detection
 
     def on_hotword(self):
+        # Stop using the mic for hotword detection
+        self.snowboy.terminate()
+
         # Call wake function if it exists
         # Handle thread
         thread = None
@@ -121,7 +119,14 @@ class WakeWord(StoppableThread):
                 self.on_wake(self.shimi)
 
         # Start to listen for a phrase
-        phrase = self.speech_recognizer.listenForPhrase()
+        get_phrase = lambda: self.speech_recognizer.listenForPhrase()
+
+        phrase = False
+        while not phrase:
+            try:
+                phrase = get_phrase()
+            except Exception as e:
+                print("nope.")
 
         # Phrase listening done, stop on_wake if thread
         if is_thread:
@@ -134,6 +139,7 @@ class WakeWord(StoppableThread):
 
         if phrase is None:
             # TODO: handle nothing said/heard
+            self.start_hotword_detection()
             return
 
         # Make phrase lowercase
@@ -168,6 +174,9 @@ class WakeWord(StoppableThread):
 
             if not found_callback:
                 print("Heard \"%s\", but didn't have any function to pass it to." % phrase)
+
+        # Resume hotword detection
+        self.start_hotword_detection()
 
     def is_thread(self, obj):
         try:
