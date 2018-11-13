@@ -14,11 +14,7 @@ import inspect
 import random
 import wakeword.snowboydecoder as snowboydecoder
 
-phrase_generator = GenerativePhrase(shimi={})
-
-
 def generate_phrase(shimi, phrase, path):
-    phrase_generator.shimi = shimi
     rand_valence = random.choice([-1, 1]) * random.random()
     rand_arousal = random.choice([-1, 1]) * random.random()
     print("VALENCE: %.4f, AROUSAL: %.4f" % (rand_valence, rand_arousal))
@@ -60,6 +56,10 @@ class WakeWord(StoppableThread):
             self.shimi = shimi
         else:
             self.shimi = Shimi()
+
+        global phrase_generator
+        phrase_generator = GenerativePhrase(shimi=shimi)
+
         self.on_wake = on_wake
         self.on_phrase = on_phrase
         self.snowboy = snowboydecoder.HotwordDetector(model, sensitivity=0.5)
