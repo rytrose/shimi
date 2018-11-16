@@ -14,12 +14,16 @@ import numpy as np
 
 
 class GenerativePhrase:
-    def __init__(self, shimi=None):
+    def __init__(self, shimi=None, posenet=True):
         if shimi is not None:
             self.shimi = shimi
         else:
             self.shimi = Shimi()
-        self.posenet = PoseNet(self.shimi, on_pred=self.on_posenet_prediction)
+        
+        self.posenet = None    
+        if posenet:
+            self.posenet = PoseNet(self.shimi, on_pred=self.on_posenet_prediction)        
+
         self.face_track = False
         self.update_freq = 0.1
         self.last_update = time.time()

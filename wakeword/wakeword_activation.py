@@ -41,7 +41,7 @@ PHRASE_CALLBACKS = [
 
 class WakeWord(StoppableThread):
     def __init__(self, shimi=None, model="wakeword/resources/models/Hey-Shimi2.pmdl", on_wake=None, on_phrase=None,
-                 respeaker=False):
+                 respeaker=False, posenet=False):
         """
         Defines a threaded process to manage using the "hey Shimi" wakeword, and making appropriate callbacks.
         :param on_wake: a non-blocking function or StoppableThread to be called when the wakeword is heard
@@ -54,7 +54,7 @@ class WakeWord(StoppableThread):
             self.shimi = Shimi()
 
         global phrase_generator
-        phrase_generator = GenerativePhrase(shimi=shimi)
+        phrase_generator = GenerativePhrase(shimi=shimi, posenet=posenet)
 
         self.on_wake = on_wake
         self.on_phrase = on_phrase
@@ -80,7 +80,11 @@ class WakeWord(StoppableThread):
                 pass
 
             # Start to listen for a phrase
-            phrase = self.speech_recognizer.listenForPhrase(phrase_time_limit=5)
+            phrase = self.speech_recognizer.listenForPhrase(timeout=5, phrase_time_limit=5)
+
+            # TODO: Handle no phrase
+            if phrase is None:
+                continue
 
             # Get rid of key word "Hey Shimi"
             phrase = " ".join(phrase.split(" ")[2:])
@@ -93,10 +97,6 @@ class WakeWord(StoppableThread):
                 # Wait for it to be done if it isn't
                 if self.on_wake_thread._thread.is_alive():
                     self.on_wake_thread.join()
-
-            if phrase is None:
-                # TODO: handle nothing said/heard
-                return
 
             # Make phrase lowercase
             phrase = phrase.lower()
