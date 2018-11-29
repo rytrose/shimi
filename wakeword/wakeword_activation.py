@@ -73,14 +73,17 @@ class WakeWord(StoppableThread):
         print("...finished.")
 
     def run(self):
-        print("Listening...")
 
         while not self.should_stop():
             while self.should_pause():
                 pass
 
+            print("::looking for phrase::")
+
             # Start to listen for a phrase
-            phrase = self.speech_recognizer.listenForPhrase(timeout=5, phrase_time_limit=5)
+            phrase = self.speech_recognizer.listenForPhrase(phrase_time_limit=5)
+
+            print("::have phrase::", phrase)
 
             # TODO: Handle no phrase
             if phrase is None:
