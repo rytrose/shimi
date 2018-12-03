@@ -60,7 +60,7 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
 
         if vel_ax:
             # Only plot this if there are velocities provided
-            if vel_matrix:
+            if not (len(vel_matrix) == 0 or not vel_matrix.any()):
                 vel_ax.plot(timestamps, vel_matrix[:,i])
             vel_ax.plot(timestamps, vel_spline)
 
