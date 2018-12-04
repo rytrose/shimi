@@ -95,7 +95,7 @@ class PlaySongDemoOnce:
         self.recognizer = get_microphone(self)
 
         # Get a phrase
-        phrase = self.recognizer.listenForPhrase()
+        phrase, _ = self.recognizer.listenForPhrase()
 
         # Demo song
         demo_song = extract_demo(self, phrase)
@@ -136,7 +136,7 @@ class PlaySongDemoListen(StoppableThread):
                 pass
 
             # Get a phrase
-            phrase = self.recognizer.listenForPhrase(timeout=2.0)
+            phrase, _ = self.recognizer.listenForPhrase(timeout=2.0)
 
             # Demo song
             demo_song = extract_demo(self, phrase)

@@ -81,7 +81,7 @@ class WakeWord(StoppableThread):
             print("::looking for phrase::")
 
             # Start to listen for a phrase
-            phrase = self.speech_recognizer.listenForPhrase(phrase_time_limit=5)
+            phrase, audio_data = self.speech_recognizer.listenForPhrase(phrase_time_limit=5)
 
             print("::have phrase::", phrase)
 
