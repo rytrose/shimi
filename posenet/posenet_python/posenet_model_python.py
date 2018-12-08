@@ -375,7 +375,7 @@ if __name__ == "__main__":
     parser.add_argument("--run", default="webcam", help="What PoseNet should be run on.")
     parser.add_argument("--video_path", default=".", help="Path to directory of videos that PoseNet should be run on.")
     parser.add_argument("--out_path", default=".", help="Path that any output should be saved to.")
-    parser.add_argument("--display", default=False, help="For webcam, show the annotated video feed.")
+    parser.add_argument("--display", type=bool, default=False, help="For webcam, show the annotated video feed.")
     args = parser.parse_args()
 
     if args.run == "webcam":

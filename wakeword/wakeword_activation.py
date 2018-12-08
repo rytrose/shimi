@@ -40,7 +40,9 @@ PHRASE_CALLBACKS = [
 
 
 class WakeWord(StoppableThread):
-    def __init__(self, shimi=None, model="wakeword/resources/models/Hey-Shimi2.pmdl", on_wake=None, on_phrase=None,
+    def __init__(self, shimi=None, model="wakeword/resources/models/Hey-Shimi2.pmdl", phrase_callbacks=PHRASE_CALLBACKS,
+                 default_callback=None,
+                 on_wake=None, on_phrase=None,
                  respeaker=False, posenet=False):
         """
         Defines a threaded process to manage using the "hey Shimi" wakeword, and making appropriate callbacks.
@@ -59,6 +61,8 @@ class WakeWord(StoppableThread):
         self.on_wake = on_wake
         self.on_phrase = on_phrase
         self.respeaker = respeaker
+        self.phrase_callbacks = phrase_callbacks
+        self.default_callback = default_callback
         self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker,
                                                   snowboy_configuration=('wakeword', [model], self.on_wake_word))
 
@@ -106,24 +110,24 @@ class WakeWord(StoppableThread):
 
             # Pass the phrase to callback
             if self.on_phrase:
-                self.on_phrase(phrase)
+                self.on_phrase(self.shimi, phrase, audio_data)
             else:
                 # Check callbacks for trigger words
                 found_callback = False
-                for phrase_callback in PHRASE_CALLBACKS:
+                for phrase_callback in self.phrase_callbacks:
                     for trigger in phrase_callback["triggers"]:
                         if trigger in phrase:
                             found_callback = True
                             print("Calling:", phrase_callback["callback"])
                             try:
                                 if self.is_thread(phrase_callback["callback"]):
-                                    phrase_callback["callback"](self.shimi, phrase=phrase).start()
+                                    phrase_callback["callback"](self.shimi, phrase=phrase, audio_data=audio_data).start()
                                 else:
                                     # HACK FOR DEMO
                                     if "args" in phrase_callback:
-                                        phrase_callback["callback"](self.shimi, phrase, *phrase_callback["args"])
+                                        phrase_callback["callback"](self.shimi, *phrase_callback["args"], phrase=phrase, audio_data=audio_data)
                                     else:
-                                        phrase_callback["callback"](self.shimi)
+                                        phrase_callback["callback"](self.shimi, phrase=phrase, audio_data=audio_data)
                             except Exception as e:
                                 print("Callback failed:", e)
                                 break
@@ -132,7 +136,15 @@ class WakeWord(StoppableThread):
                             break
 
                 if not found_callback:
-                    print("Heard \"%s\", but didn't have any function to pass it to." % phrase)
+                    print("Heard \"%s\", but didn't have any function to pass it to. Calling default." % phrase)
+                    if not self.default_callback:
+                        print("No default callback.")
+                    else:
+                        try:
+                            default_callback["callback"](self.shimi, phrase, *default_callback["args"])
+                        except Exception as e:
+                            print("Default callback failed.", e)
+
 
     def on_wake_word(self):
         # Call wake function if it exists
