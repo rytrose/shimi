@@ -9,3 +9,4 @@ checkpoints/
 spotify/.cache-*
 spotify/client_credentials.py
 _snowboydetect.so
+shimi-google-cloud-credentials.json

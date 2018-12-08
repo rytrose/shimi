@@ -59,12 +59,15 @@ class WakeWord(StoppableThread):
         phrase_generator = GenerativePhrase(shimi=shimi, posenet=posenet)
 
         self.on_wake = on_wake
+        self.on_wake_is_thread = self.is_thread(self.on_wake)
         self.on_phrase = on_phrase
         self.respeaker = respeaker
         self.phrase_callbacks = phrase_callbacks
         self.default_callback = default_callback
         self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker,
-                                                  snowboy_configuration=('wakeword', [model], self.on_wake_word))
+                                                  snowboy_configuration=('wakeword', [model], self.on_wake_word),
+                                                  google_cloud=False,
+                                                  sphinx=False)
 
         StoppableThread.__init__(self,
                                  setup=self.setup,
@@ -74,7 +77,7 @@ class WakeWord(StoppableThread):
     def setup(self):
         print("Please be quiet for microphone calibration...")
         self.speech_recognizer.calibrate()
-        print("...finished.")
+        print("...finished calibrating.")
 
     def run(self):
 
@@ -82,12 +85,15 @@ class WakeWord(StoppableThread):
             while self.should_pause():
                 pass
 
-            print("::looking for phrase::")
+            # Phrase listening done, stop on_wake if thread
+            if self.on_wake_is_thread:
+                phrase, audio_data = self.speech_recognizer.listenForPhrase(phrase_time_limit=5,
+                                                                            on_phrase=self.stop_on_wake_thread)
+            else:
+                # Start to listen for a phrase
+                phrase, audio_data = self.speech_recognizer.listenForPhrase(phrase_time_limit=5)
 
-            # Start to listen for a phrase
-            phrase, audio_data = self.speech_recognizer.listenForPhrase(phrase_time_limit=5)
-
-            print("::have phrase::", phrase)
+            print("You said: \"%s\"" % phrase)
 
             # TODO: Handle no phrase
             if phrase is None:
@@ -95,15 +101,6 @@ class WakeWord(StoppableThread):
 
             # Get rid of key word "Hey Shimi"
             phrase = " ".join(phrase.split(" ")[2:])
-
-            # Phrase listening done, stop on_wake if thread
-            if self.on_wake_is_thread:
-                # Stop thread
-                self.on_wake_thread.stop()
-
-                # Wait for it to be done if it isn't
-                if self.on_wake_thread._thread.is_alive():
-                    self.on_wake_thread.join()
 
             # Make phrase lowercase
             phrase = phrase.lower()
@@ -121,11 +118,13 @@ class WakeWord(StoppableThread):
                             print("Calling:", phrase_callback["callback"])
                             try:
                                 if self.is_thread(phrase_callback["callback"]):
-                                    phrase_callback["callback"](self.shimi, phrase=phrase, audio_data=audio_data).start()
+                                    phrase_callback["callback"](self.shimi, phrase=phrase,
+                                                                audio_data=audio_data).start()
                                 else:
                                     # HACK FOR DEMO
                                     if "args" in phrase_callback:
-                                        phrase_callback["callback"](self.shimi, *phrase_callback["args"], phrase=phrase, audio_data=audio_data)
+                                        phrase_callback["callback"](self.shimi, *phrase_callback["args"], phrase=phrase,
+                                                                    audio_data=audio_data)
                                     else:
                                         phrase_callback["callback"](self.shimi, phrase=phrase, audio_data=audio_data)
                             except Exception as e:
@@ -145,12 +144,18 @@ class WakeWord(StoppableThread):
                         except Exception as e:
                             print("Default callback failed.", e)
 
+    def stop_on_wake_thread(self):
+        # Stop thread
+        self.on_wake_thread.stop()
+
+        # Wait for it to be done if it isn't
+        if self.on_wake_thread._thread.is_alive():
+            self.on_wake_thread.join()
 
     def on_wake_word(self):
         # Call wake function if it exists
         # Handle thread
         if self.on_wake:
-            self.on_wake_is_thread = self.is_thread(self.on_wake)
             if self.on_wake_is_thread:
                 self.on_wake_thread = self.on_wake(self.shimi)
                 self.on_wake_thread.start()
