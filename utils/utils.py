@@ -15,6 +15,10 @@ def denormalize_to_range(value, range_min, range_max):
     return (value * (range_max - range_min)) + range_min
 
 
+def normalize_to_range(value, range_min, range_max):
+    return (value - range_min) / (range_max - range_min)
+
+
 def countdown(duration):
     waiting = duration
     while waiting > 0:
@@ -22,6 +26,7 @@ def countdown(duration):
         sleep_time = min(1.0, waiting)
         waiting -= sleep_time
         time.sleep(sleep_time)
+
 
 def quantize(num, quant):
     mids = [(quant[i] + quant[i + 1]) / 2.0

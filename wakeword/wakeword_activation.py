@@ -43,7 +43,7 @@ class WakeWord(StoppableThread):
     def __init__(self, shimi=None, model="wakeword/resources/models/Hey-Shimi2.pmdl", phrase_callbacks=PHRASE_CALLBACKS,
                  default_callback=None,
                  on_wake=None, on_phrase=None,
-                 respeaker=False, posenet=False):
+                 respeaker=False, posenet=False, doa=None):
         """
         Defines a threaded process to manage using the "hey Shimi" wakeword, and making appropriate callbacks.
         :param on_wake: a non-blocking function or StoppableThread to be called when the wakeword is heard
@@ -62,6 +62,7 @@ class WakeWord(StoppableThread):
         self.on_wake_is_thread = self.is_thread(self.on_wake)
         self.on_phrase = on_phrase
         self.respeaker = respeaker
+        self.doa = doa
         self.phrase_callbacks = phrase_callbacks
         self.default_callback = default_callback
         self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker,
@@ -87,27 +88,31 @@ class WakeWord(StoppableThread):
 
             # Phrase listening done, stop on_wake if thread
             if self.on_wake_is_thread:
-                phrase, audio_data = self.speech_recognizer.listenForPhrase(phrase_time_limit=5,
-                                                                            on_phrase=self.stop_on_wake_thread)
+                phrase, audio_data, doa_value = self.speech_recognizer.listenForPhrase(phrase_time_limit=5,
+                                                                            on_phrase=self.stop_on_wake_thread,
+                                                                            doa=self.doa)
             else:
                 # Start to listen for a phrase
-                phrase, audio_data = self.speech_recognizer.listenForPhrase(phrase_time_limit=5)
-
-            print("You said: \"%s\"" % phrase)
+                phrase, audio_data, doa_value = self.speech_recognizer.listenForPhrase(phrase_time_limit=5, doa=self.doa)
 
             # TODO: Handle no phrase
             if phrase is None:
                 continue
 
-            # Get rid of key word "Hey Shimi"
-            phrase = " ".join(phrase.split(" ")[2:])
-
             # Make phrase lowercase
             phrase = phrase.lower()
 
+            # Check words
+            split = phrase.split(" ")
+            if split[0] == "hey":
+                # Get rid of key word "Hey Shimi"
+                phrase = " ".join(phrase.split(" ")[2:])
+
+            print("Phrase said: %s" % phrase)
+
             # Pass the phrase to callback
             if self.on_phrase:
-                self.on_phrase(self.shimi, phrase, audio_data)
+                self.on_phrase(self.shimi, phrase, audio_data, doa_value)
             else:
                 # Check callbacks for trigger words
                 found_callback = False

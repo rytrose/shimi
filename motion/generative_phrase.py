@@ -5,9 +5,11 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from shimi import Shimi
 from posenet.posenet import PoseNet
-from utils.utils import Point, normalize_position, denormalize_position, denormalize_to_range, quantize
+from utils.utils import Point, normalize_position, denormalize_position, denormalize_to_range, quantize, \
+    normalize_to_range
 from audio.midi_analysis import MidiAnalysis
 from motion.move import Move
+import pygame.mixer as mixer
 import random
 import time
 import numpy as np
@@ -19,15 +21,16 @@ class GenerativePhrase:
             self.shimi = shimi
         else:
             self.shimi = Shimi()
-        
-        self.posenet = None    
+
+        self.posenet = None
         if posenet:
-            self.posenet = PoseNet(self.shimi, on_pred=self.on_posenet_prediction)        
+            self.posenet = PoseNet(self.shimi, on_pred=self.on_posenet_prediction)
 
         self.face_track = False
         self.update_freq = 0.1
         self.last_update = time.time()
         self.last_pos = 0.5
+        mixer.init()
 
     def on_posenet_prediction(self, pose, fps):
         # **N.B.** For simplification, this isn't being loaded from the config.yaml, where it is defined.
@@ -71,9 +74,9 @@ class GenerativePhrase:
 
                     self.last_update = time.time()
 
-    def generate(self, path, valence, arousal):
+    def generate(self, midi_path, valence, arousal, doa_value=doa_value, wav_path=None):
         # Analyze the MIDI
-        self.midi_analysis = MidiAnalysis(path)
+        self.midi_analysis = MidiAnalysis(midi_path)
         tempo = self.midi_analysis.get_tempo()
         length = self.midi_analysis.get_length()
 
@@ -86,6 +89,10 @@ class GenerativePhrase:
         neck_ud = self.neck_ud_movement(length, valence, arousal, torso)
         moves.append(neck_ud)
 
+        # Load wav file if given
+        if wav_path:
+            mixer.music.load(wav_path)
+
         # Start all the moves
         for move in moves:
             move.start()
@@ -93,8 +100,12 @@ class GenerativePhrase:
         # Turn on face tracking
         self.face_track = True
 
-        # For testing, play the MIDI file back
-        self.midi_analysis.play()
+        # Play audio if given
+        if wav_path:
+            mixer.music.play()
+        else:
+            # For testing, play the MIDI file back
+            self.midi_analysis.play()
 
         # Wait for all the moves to stop
         for move in moves:
@@ -104,6 +115,10 @@ class GenerativePhrase:
         self.face_track = False
 
         self.shimi.initial_position()
+
+    def neck_lr_doa_movement(self, length, doa_value, valence, arousal):
+        # 120 left, 90 middle, 60 right
+        normalized_doa = normalize_to_range(doa_value, 120, 60)
 
     def neck_ud_movement(self, length, valence, arousal, torso):
         # Note: ~0.2 of neck movement accounts for torso
@@ -167,7 +182,6 @@ class GenerativePhrase:
         pos_in_range = half_range + (direction * (half_range - (0.2 * random.random() * half_range)))
 
         return 1 - (offset + pos_in_range)
-
 
     def torso_movement(self, valence, arousal):
         contour_notes = self.midi_analysis.get_normalized_pitch_contour()
