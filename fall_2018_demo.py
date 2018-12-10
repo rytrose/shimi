@@ -7,6 +7,7 @@ from shimiAudio.demo import audio_response_demo
 from ctypes import *
 import pygame.mixer as mixer
 import parselmouth as pm
+import time
 
 
 # Used to catch and drop alsa warnings
@@ -30,7 +31,9 @@ def main():
         shimi = Shimi()
 
         # Make DOA object
-        doa = DOA()
+        # s = time.time()
+        # doa = DOA()
+        # print(":: time to make DOA: %f ::" % (time.time() - s))
 
         # Set up generative phrase motion
         phrase_generator = GenerativePhrase(shimi=shimi, posenet=False)
@@ -38,15 +41,15 @@ def main():
         # Use a closure to reference the phrase_generator
         # Used to take a phrase, give to generation code, and start gesture playback
         def dialogue(_, phrase, audio_data, doa_value):
-            print("::: doa value of: %f :::" % doa_value)
-            filename = audio_response_demo(phrase, audio_data[0], audio_data[1])
-            # audio_filename, midi_filename = ("angry1.wav", "angry1.mid")
-            # print("Starting generation...")
-            # phrase_generator.generate(midi_filename, -0.5, 0.2, wav_path=audio_filename)
+            # print("::: doa value of: %f :::" % doa_value)
+            # filename = audio_response_demo(phrase, audio_data[0], audio_data[1])
+            audio_filename, midi_filename = ("angry1.wav", "angry1.mid")
+            print("Starting generation...")
+            phrase_generator.generate(midi_filename, -0.5, 0.2, wav_path=audio_filename, doa_value=doa_value)
 
         # Set up wakeword
         wakeword = WakeWord(shimi=shimi, model="wakeword/resources/models/Hey-Shimi2.pmdl", on_wake=Alert,
-                            on_phrase=dialogue, respeaker=True, doa=doa)
+                            on_phrase=dialogue, respeaker=True, use_doa=True)#doa)
 
         wakeword.start()
 
@@ -56,7 +59,7 @@ def main():
 
     except KeyboardInterrupt as e:
         print("Exiting...", e)
-        doa.stop()
+        # doa.stop()
         shimi.initial_position()
         shimi.disable_torque()
 

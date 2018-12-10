@@ -43,7 +43,7 @@ class WakeWord(StoppableThread):
     def __init__(self, shimi=None, model="wakeword/resources/models/Hey-Shimi2.pmdl", phrase_callbacks=PHRASE_CALLBACKS,
                  default_callback=None,
                  on_wake=None, on_phrase=None,
-                 respeaker=False, posenet=False, doa=None):
+                 respeaker=False, posenet=False, use_doa=False):
         """
         Defines a threaded process to manage using the "hey Shimi" wakeword, and making appropriate callbacks.
         :param on_wake: a non-blocking function or StoppableThread to be called when the wakeword is heard
@@ -62,7 +62,7 @@ class WakeWord(StoppableThread):
         self.on_wake_is_thread = self.is_thread(self.on_wake)
         self.on_phrase = on_phrase
         self.respeaker = respeaker
-        self.doa = doa
+        self.use_doa = use_doa
         self.phrase_callbacks = phrase_callbacks
         self.default_callback = default_callback
         self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker,
@@ -89,11 +89,12 @@ class WakeWord(StoppableThread):
             # Phrase listening done, stop on_wake if thread
             if self.on_wake_is_thread:
                 phrase, audio_data, doa_value = self.speech_recognizer.listenForPhrase(phrase_time_limit=5,
-                                                                            on_phrase=self.stop_on_wake_thread,
-                                                                            doa=self.doa)
+                                                                                       on_phrase=self.stop_on_wake_thread,
+                                                                                       use_doa=self.use_doa)
             else:
                 # Start to listen for a phrase
-                phrase, audio_data, doa_value = self.speech_recognizer.listenForPhrase(phrase_time_limit=5, doa=self.doa)
+                phrase, audio_data, doa_value = self.speech_recognizer.listenForPhrase(phrase_time_limit=5,
+                                                                                       use_doa=self.use_doa)
 
             # TODO: Handle no phrase
             if phrase is None:

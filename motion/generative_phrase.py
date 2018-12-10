@@ -74,7 +74,7 @@ class GenerativePhrase:
 
                     self.last_update = time.time()
 
-    def generate(self, midi_path, valence, arousal, doa_value=doa_value, wav_path=None):
+    def generate(self, midi_path, valence, arousal, doa_value=None, wav_path=None):
         # Analyze the MIDI
         self.midi_analysis = MidiAnalysis(midi_path)
         tempo = self.midi_analysis.get_tempo()
@@ -88,6 +88,10 @@ class GenerativePhrase:
         moves.append(torso)
         neck_ud = self.neck_ud_movement(length, valence, arousal, torso)
         moves.append(neck_ud)
+
+        if doa_value and not self.posenet:
+            neck_lr = self.neck_lr_doa_movement(tempo, length, doa_value, valence, arousal)
+            moves.append(neck_lr)
 
         # Load wav file if given
         if wav_path:
@@ -116,9 +120,31 @@ class GenerativePhrase:
 
         self.shimi.initial_position()
 
-    def neck_lr_doa_movement(self, length, doa_value, valence, arousal):
-        # 120 left, 90 middle, 60 right
-        normalized_doa = normalize_to_range(doa_value, 120, 60)
+    def neck_lr_doa_movement(self, tempo, length, doa_value, valence, arousal):
+        # 120 left, 30 right
+        normalized_doa = normalize_to_range(doa_value, 120, 30)
+
+        print("::: doa: %f, normalized: %f :::" % (doa_value, normalized_doa))
+
+        neck_lr_move = Move(self.shimi, self.shimi.neck_lr, normalized_doa, tempo)
+
+        t = tempo
+        delay = 0.0
+        while t < length:
+            rest = random.choice([True, False])
+            if rest:
+                rest_dur = 2 * tempo * random.random()
+                delay += rest_dur
+                t += rest_dur
+            else:
+                new_pos = normalized_doa + (random.choice([-1, 1]) * ((1 + valence) / 2) * 0.3)
+                move_dur = 2 * tempo * ((1 + arousal) / 2)
+                neck_lr_move.add_move(new_pos, move_dur, delay=delay)
+                delay = 0.0
+                t += move_dur
+
+        return neck_lr_move
+
 
     def neck_ud_movement(self, length, valence, arousal, torso):
         # Note: ~0.2 of neck movement accounts for torso
