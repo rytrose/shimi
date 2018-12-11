@@ -1,9 +1,12 @@
+import sys
+import os
+sys.path.insert(1, os.path.join(sys.path[0], 'shimiAudio'))
 from shimi import Shimi
 from motion.move import Alert
 from motion.generative_phrase import GenerativePhrase
 from wakeword.wakeword_activation import WakeWord
 from wakeword.doa import DOA
-from shimiAudio.demo import audio_response_demo
+from demo import audio_response_demo
 from ctypes import *
 import pygame.mixer as mixer
 import parselmouth as pm
@@ -30,22 +33,16 @@ def main():
         # Make Shimi object
         shimi = Shimi()
 
-        # Make DOA object
-        # s = time.time()
-        # doa = DOA()
-        # print(":: time to make DOA: %f ::" % (time.time() - s))
-
         # Set up generative phrase motion
         phrase_generator = GenerativePhrase(shimi=shimi, posenet=False)
 
         # Use a closure to reference the phrase_generator
         # Used to take a phrase, give to generation code, and start gesture playback
         def dialogue(_, phrase, audio_data, doa_value):
-            # print("::: doa value of: %f :::" % doa_value)
-            # filename = audio_response_demo(phrase, audio_data[0], audio_data[1])
-            audio_filename, midi_filename = ("angry1.wav", "angry1.mid")
-            print("Starting generation...")
-            phrase_generator.generate(midi_filename, -0.5, 0.2, wav_path=audio_filename, doa_value=doa_value)
+            wav_filename, midi_filename, valence, arousal = audio_response_demo(phrase, audio_data[0], audio_data[1])
+            midi_filename = "angry1.mid"
+            print("Starting generation...valence: %f, arousal: %f" % (valence, arousal))
+            phrase_generator.generate(midi_filename, valence, arousal, wav_path=wav_filename, doa_value=doa_value)
 
         # Set up wakeword
         wakeword = WakeWord(shimi=shimi, model="wakeword/resources/models/Hey-Shimi2.pmdl", on_wake=Alert,
