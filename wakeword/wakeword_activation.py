@@ -43,7 +43,7 @@ class WakeWord(StoppableThread):
     def __init__(self, shimi=None, model="wakeword/resources/models/Hey-Shimi2.pmdl", phrase_callbacks=PHRASE_CALLBACKS,
                  default_callback=None,
                  on_wake=None, on_phrase=None,
-                 respeaker=False, posenet=False, use_doa=False):
+                 respeaker=False, posenet=False, use_doa=False, manual_wake=False):
         """
         Defines a threaded process to manage using the "hey Shimi" wakeword, and making appropriate callbacks.
         :param on_wake: a non-blocking function or StoppableThread to be called when the wakeword is heard
@@ -65,10 +65,14 @@ class WakeWord(StoppableThread):
         self.use_doa = use_doa
         self.phrase_callbacks = phrase_callbacks
         self.default_callback = default_callback
-        self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker,
-                                                  snowboy_configuration=('wakeword', [model], self.on_wake_word),
-                                                  google_cloud=False,
-                                                  sphinx=False)
+        self.manual_wake = manual_wake
+        if self.manual_wake:
+            self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker)
+        else:
+            self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker,
+                                                      snowboy_configuration=('wakeword', [model], self.on_wake_word),
+                                                      google_cloud=False,
+                                                      sphinx=False)
 
         StoppableThread.__init__(self,
                                  setup=self.setup,
@@ -86,7 +90,11 @@ class WakeWord(StoppableThread):
             while self.should_pause():
                 pass
 
-            # Phrase listening done, stop on_wake if thread
+            if self.manual_wake:
+                print("Press enter to wake Shimi.")
+                input()
+                self.on_wake_word()
+
             if self.on_wake_is_thread:
                 phrase, audio_data, doa_value = self.speech_recognizer.listenForPhrase(phrase_time_limit=5,
                                                                                        on_phrase=self.stop_on_wake_thread,
