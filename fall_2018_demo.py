@@ -11,6 +11,8 @@ from ctypes import *
 import pygame.mixer as mixer
 import parselmouth as pm
 import time
+import matplotlib.pyplot as plt
+from PIL import Image
 
 
 # Used to catch and drop alsa warnings
@@ -40,8 +42,23 @@ def main():
         # Used to take a phrase, give to generation code, and start gesture playback
         def dialogue(_, phrase, audio_data, doa_value):
             wav_filename, midi_filename, valence, arousal = audio_response_demo(phrase, audio_data[0], audio_data[1])
-            midi_filename = "angry1.mid"
-            print("Starting generation...valence: %f, arousal: %f" % (valence, arousal))
+
+            plt.title("Shimi Emotion")
+            plt.xlabel("Valence")
+            plt.ylabel("Arousal")
+            plt.xlim(-1.0, 1.0)
+            plt.ylim(-1.0, 1.0)
+            plt.scatter([valence], [arousal])
+            plt.xticks([0.0])
+            plt.yticks([0.0])
+            plt.grid(True)
+            print("VALENCE: %2f, AROUSAL: %.2f" % (valence, arousal))
+            plt.annotate("(%.2f, %.2f)" % (valence, arousal), xy=(valence, arousal - 0.05))
+
+            plt.savefig("val_aro.png")
+            Image.open("val_aro.png").show()
+            plt.clf()
+
             phrase_generator.generate(midi_filename, valence, arousal, wav_path=wav_filename, doa_value=doa_value)
 
         # Set up wakeword
@@ -56,7 +73,6 @@ def main():
 
     except KeyboardInterrupt as e:
         print("Exiting...", e)
-        # doa.stop()
         shimi.initial_position()
         shimi.disable_torque()
 

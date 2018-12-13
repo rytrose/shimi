@@ -43,13 +43,17 @@ class MidiAnalysis:
         :return: a list of note objects with a norm_pitch attribute, and start/end times in seconds
         """
         interval = self.m21_obj.analyze('range')
-        range = interval.semitones
+        pitch_range = interval.semitones
         lowest = interval.noteStart.midi
 
         notes = []
 
+        if pitch_range == 0:
+            notes = [8.0 for _ in range(len(self.pm_obj.instruments[0].notes))]
+            return notes
+
         for note in self.pm_obj.instruments[0].notes:
-            norm_pitch = (note.pitch - lowest) / range
+            norm_pitch = (note.pitch - lowest) / pitch_range
             notes.append({
                 "norm_pitch": norm_pitch,
                 "start": note.start,

@@ -123,10 +123,12 @@ class GenerativePhrase:
     def neck_lr_doa_movement(self, tempo, length, doa_value, valence, arousal):
         # 120 left, 30 right
         normalized_doa = normalize_to_range(doa_value, 120, 30)
+        normalized_arousal = (arousal + 1) / 2
 
-        print("::: doa: %f, normalized: %f :::" % (doa_value, normalized_doa))
+        print("::: DOA: %f, normalized: %f :::" % (doa_value, normalized_doa))
 
-        neck_lr_move = Move(self.shimi, self.shimi.neck_lr, normalized_doa, tempo)
+        move_dur = 2 * tempo * ((1 - normalized_arousal) + 0.25)
+        neck_lr_move = Move(self.shimi, self.shimi.neck_lr, normalized_doa, move_dur)
 
         t = tempo
         delay = 0.0
@@ -138,7 +140,7 @@ class GenerativePhrase:
                 t += rest_dur
             else:
                 new_pos = normalized_doa + (random.choice([-1, 1]) * ((1 + valence) / 2) * 0.3)
-                move_dur = 2 * tempo * ((1 + arousal) / 2)
+                move_dur = 2 * tempo * ((1 - normalized_arousal) + 0.25)
                 neck_lr_move.add_move(new_pos, move_dur, delay=delay)
                 delay = 0.0
                 t += move_dur
