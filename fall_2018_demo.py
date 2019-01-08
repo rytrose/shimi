@@ -59,11 +59,14 @@ def main():
             Image.open("val_aro.png").show()
             plt.clf()
 
+            # Force look straight ahead
+            doa_value = 75
+
             phrase_generator.generate(midi_filename, valence, arousal, wav_path=wav_filename, doa_value=doa_value)
 
         # Set up wakeword
         wakeword = WakeWord(shimi=shimi, model="wakeword/resources/models/Hey-Shimi2.pmdl", on_wake=Alert,
-                            on_phrase=dialogue, respeaker=True, use_doa=True, manual_wake=True)
+                            on_phrase=dialogue, respeaker=True, use_doa=True)#, manual_wake=True)
 
         wakeword.start()
 

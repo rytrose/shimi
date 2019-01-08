@@ -167,13 +167,13 @@ class GenerativePhrase:
         direction = random.choice([-1, 1])
 
         # Proportion of available range (limited by torso) that can be used
-        range = 0
+        pos_range = 0
         if arousal >= 0:
             # Shorter movements for lower positive arousal
-            range = denormalize_to_range(arousal, 0.4, 1.0)
+            pos_range = denormalize_to_range(arousal, 0.4, 1.0)
         else:
             # Short movements for less negative arousal
-            range = denormalize_to_range(abs(arousal), 0.4, 1.0)
+            pos_range = denormalize_to_range(abs(arousal), 0.4, 1.0)
 
         # Keep track of timeline
         t = 0
@@ -182,7 +182,7 @@ class GenerativePhrase:
         while t < nod_wait:
             t += half_beat
 
-        pos = self.calculate_neck_ud_position(t, torso, torso_offset, range, direction)
+        pos = self.calculate_neck_ud_position(t, torso, torso_offset, pos_range, direction)
         neck_ud_move = Move(self.shimi, self.shimi.neck_ud, pos, t)
         last_move = t
         direction = not direction
@@ -191,20 +191,20 @@ class GenerativePhrase:
             if t < last_move + nod_wait:
                 t += half_beat
             else:
-                pos = self.calculate_neck_ud_position(t, torso, torso_offset, range, direction)
+                pos = self.calculate_neck_ud_position(t, torso, torso_offset, pos_range, direction)
                 neck_ud_move.add_move(pos, t - last_move)
                 last_move = t
                 direction = not direction
 
         return neck_ud_move
 
-    def calculate_neck_ud_position(self, t, torso, torso_offset, range, direction):
+    def calculate_neck_ud_position(self, t, torso, torso_offset, pos_range, direction):
         # Torso offset to make it look up when bending forward
         torso_timestamps = torso.get_timestamps()
         torso_position = np.interp(t, torso_timestamps, torso.positions)
         offset = (1 - torso_position) * 10 * torso_offset
 
-        half_range = range / 2
+        half_range = pos_range / 2
 
         # Vary the distance by 20% of possible moving distance
         pos_in_range = half_range + (direction * (half_range - (0.2 * random.random() * half_range)))
