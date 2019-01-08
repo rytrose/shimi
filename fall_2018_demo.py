@@ -66,7 +66,7 @@ def main():
 
         # Set up wakeword
         wakeword = WakeWord(shimi=shimi, model="wakeword/resources/models/Hey-Shimi2.pmdl", on_wake=Alert,
-                            on_phrase=dialogue, respeaker=True, use_doa=True)#, manual_wake=True)
+                            on_phrase=dialogue, respeaker=True, use_doa=True, manual_wake=True)
 
         wakeword.start()
 
