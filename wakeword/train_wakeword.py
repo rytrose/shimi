@@ -6,6 +6,8 @@ import argparse
 import sounddevice as sd
 import soundfile as sf
 import time
+import pyaudio
+import wave
 
 def get_wave(fname):
     with open(fname, "rb") as infile:
@@ -14,6 +16,8 @@ def get_wave(fname):
 
 
 def train_wakeword(age_group, gender, out):
+    audio = pyaudio.PyAudio()
+
     fs = 16000
     endpoint = "https://snowboy.kitt.ai/api/v1/train/"
     token = SNOWBOY_API_KEY
@@ -26,16 +30,9 @@ def train_wakeword(age_group, gender, out):
     for i in range(1, 4):
         print("Press enter to begin recording the wakeword. [%d of 3]" % i)
         input()
-        start = time.time()
-        recording = sd.rec(int(10.0 * fs), samplerate=fs, channels=1)
-        print("Recording...press enter again to stop.")
-        input()
-        duration = time.time() - start
-        num_samples = int(duration * fs)
-        sd.stop()
         file = temp_file_prefix + str(i) + ".wav"
+        record_pyaudio(audio, file)
         files.append(file)
-        sf.write(file, recording[:num_samples], fs)
 
     data = {
         "name": hotword_name,
@@ -61,6 +58,35 @@ def train_wakeword(age_group, gender, out):
         print("Request failed.")
         print(response.text)
 
+    audio.terminate()
+
+def record_pyaudio(audio, name):
+    FORMAT = pyaudio.paInt16
+    CHANNELS = 1
+    RATE = 16000
+    CHUNK = 1024
+
+    stream = audio.open(input_device_index=2, format=FORMAT, channels=CHANNELS,
+                        rate=RATE, input=True,
+                        frames_per_buffer=CHUNK)
+
+    frames = []
+
+    try:
+        print("Recording...press ^C to stop.")
+        while True:
+            data = stream.read(CHUNK)
+            frames.append(data)
+    except KeyboardInterrupt:
+        stream.stop_stream()
+        stream.close()
+
+    waveFile = wave.open(name, 'wb')
+    waveFile.setnchannels(CHANNELS)
+    waveFile.setsampwidth(audio.get_sample_size(FORMAT))
+    waveFile.setframerate(RATE)
+    waveFile.writeframes(b''.join(frames))
+    waveFile.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="On-demand hotword model training.")
@@ -71,3 +97,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     train_wakeword(args.age_group, args.gender, args.out)
+

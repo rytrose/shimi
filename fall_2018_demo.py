@@ -13,6 +13,7 @@ import parselmouth as pm
 import time
 import matplotlib.pyplot as plt
 from PIL import Image
+import glob
 
 
 # Used to catch and drop alsa warnings
@@ -62,13 +63,14 @@ def main():
             # Force look straight ahead
             doa_value = 75
 
-            phrase_generator.generate(midi_filename, valence, arousal, wav_path=wav_filename, doa_value=doa_value)
+            phrase_generator.generate("heymidi.mid", valence, arousal, wav_path="heyjude.mp3", doa_value=doa_value)
 
         # Set up wakeword
-        wakeword = WakeWord(shimi=shimi, model="wakeword/resources/models/Hey-Shimi2.pmdl", on_wake=Alert,
-                            on_phrase=dialogue, respeaker=True, use_doa=True, manual_wake=True)
+        model_files = glob.glob("wakeword/resources/models/*.pmdl")
+        wakeword = WakeWord(shimi=shimi, models=model_files, on_wake=Alert,
+                            on_phrase=dialogue, respeaker=True, use_doa=True)#, manual_wake=True)
 
-        wakeword.start()
+        wakeword.run()
 
         while True:
             # Continue listening until keyboard interrupt

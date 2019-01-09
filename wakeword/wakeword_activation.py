@@ -39,8 +39,8 @@ PHRASE_CALLBACKS = [
 ]
 
 
-class WakeWord(StoppableThread):
-    def __init__(self, shimi=None, model="wakeword/resources/models/Hey-Shimi2.pmdl", phrase_callbacks=PHRASE_CALLBACKS,
+class WakeWord:
+    def __init__(self, shimi=None, models=["wakeword/resources/models/Hey-Shimi-Ryan1.pmdl"], phrase_callbacks=PHRASE_CALLBACKS,
                  default_callback=None,
                  on_wake=None, on_phrase=None,
                  respeaker=False, posenet=False, use_doa=False, manual_wake=False):
@@ -70,14 +70,11 @@ class WakeWord(StoppableThread):
             self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker)
         else:
             self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker,
-                                                      snowboy_configuration=('wakeword', [model], self.on_wake_word),
+                                                      snowboy_configuration=('wakeword', models, self.on_wake_word),
                                                       google_cloud=False,
                                                       sphinx=False)
 
-        StoppableThread.__init__(self,
-                                 setup=self.setup,
-                                 target=self.run,
-                                 teardown=self.teardown)
+        self.setup()
 
     def setup(self):
         print("Please be quiet for microphone calibration...")
@@ -85,11 +82,7 @@ class WakeWord(StoppableThread):
         print("...finished calibrating.")
 
     def run(self):
-
-        while not self.should_stop():
-            while self.should_pause():
-                pass
-
+        while True:
             if self.manual_wake:
                 print("Press enter to wake Shimi.")
                 input()
