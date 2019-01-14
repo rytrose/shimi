@@ -1,5 +1,5 @@
 import time
-from matt.SpeechRecognizer import SpeechRecognizer
+from matt.SpeechRecognizer import SpeechRecognizer, SpeechRecognizerClient
 from pypot.utils import StoppableThread
 from shimi import Shimi
 from audio.audio_demos import play_opera, play_outkast
@@ -39,8 +39,118 @@ PHRASE_CALLBACKS = [
 ]
 
 
+class WakeWordClient:
+    def __init__(self, shimi=None, models=["wakeword/resources/models/Hey-Shimi-Ryan1.pmdl"],
+                 phrase_callbacks=PHRASE_CALLBACKS,
+                 default_callback=None,
+                 on_wake=None, on_phrase=None,
+                 respeaker=False, posenet=False, use_doa=False, manual_wake=False):
+        """
+        Defines a threaded process to manage using the "hey Shimi" wakeword, and making appropriate callbacks.
+        :param on_wake: a non-blocking function or StoppableThread to be called when the wakeword is heard
+        :param on_phrase: a function to be called when a phrase is gathered after the wakeword
+        :param respeaker: if True, will look for the ReSpeaker microphone
+        """
+        if shimi is not None:
+            self.shimi = shimi
+        else:
+            self.shimi = Shimi()
+
+        global phrase_generator
+        phrase_generator = GenerativePhrase(shimi=shimi, posenet=posenet)
+
+        self.on_wake = on_wake
+        self.on_wake_is_thread = self.is_thread(self.on_wake)
+        self.on_phrase = on_phrase
+        self.respeaker = respeaker
+        self.use_doa = use_doa
+        self.phrase_callbacks = phrase_callbacks
+        self.default_callback = default_callback
+        self.manual_wake = manual_wake
+
+        if self.manual_wake:
+            if self.on_wake_is_thread:
+                self.speech_recognizer_client = SpeechRecognizerClient(respeaker=self.respeaker,
+                                                                       on_phrase_heard=self.stop_on_wake_thread,
+                                                                       on_phrase=self.on_phrase_wrapper)
+            else:
+                self.speech_recognizer_client = SpeechRecognizerClient(respeaker=self.respeaker,
+                                                                       on_phrase=self.on_phrase_wrapper)
+        else:
+            if self.on_wake_is_thread:
+                self.speech_recognizer_client = SpeechRecognizerClient(respeaker=self.respeaker,
+                                                                       on_phrase_heard=self.stop_on_wake_thread,
+                                                                       on_phrase=self.on_phrase_wrapper,
+                                                                       snowboy_configuration=(
+                                                                           'wakeword', models, self.on_wake_word))
+            else:
+                self.speech_recognizer_client = SpeechRecognizerClient(respeaker=self.respeaker,
+                                                                       on_phrase=self.on_phrase_wrapper,
+                                                                       snowboy_configuration=(
+                                                                           'wakeword', models, self.on_wake_word))
+
+    def run(self):
+        print("Starting speech recognition...")
+
+        if self.manual_wake:
+            print("Press enter to wake Shimi.")
+            input()
+            self.on_wake_word()
+
+        # Start the speech recognition client
+        self.speech_recognizer_client.listen()
+
+    def on_phrase_wrapper(self, audio_data, sample_rate, phrase):
+        # Make phrase lowercase
+        phrase = phrase.lower()
+
+        # Check words
+        split = phrase.split(" ")
+        if split[0] == "hey":
+            # Get rid of key word "Hey Shimi"
+            phrase = " ".join(phrase.split(" ")[2:])
+
+        self.on_phrase(self.shimi, phrase, (audio_data, sample_rate), None)
+
+        # Listen again
+        if self.manual_wake:
+            print("Press enter to wake Shimi.")
+            input()
+            self.on_wake_word()
+
+        self.speech_recognizer_client.listen()
+
+    def stop_on_wake_thread(self):
+        # Stop thread
+        self.on_wake_thread.stop()
+
+        # Wait for it to be done if it isn't
+        if self.on_wake_thread._thread.is_alive():
+            self.on_wake_thread.join()
+
+    def on_wake_word(self):
+        # Call wake function if it exists
+        # Handle thread
+        if self.on_wake:
+            if self.on_wake_is_thread:
+                self.on_wake_thread = self.on_wake(self.shimi)
+                self.on_wake_thread.start()
+            else:
+                self.on_wake(self.shimi)
+
+    def is_thread(self, obj):
+        try:
+            if "StoppableThread" in [cls.__name__ for cls in inspect.getmro(obj)]:
+                return True
+            else:
+                return False
+        except:
+            return False
+
+
 class WakeWord:
-    def __init__(self, shimi=None, models=["wakeword/resources/models/Hey-Shimi-Ryan1.pmdl"], phrase_callbacks=PHRASE_CALLBACKS,
+    def __init__(self, shimi=None, models=["wakeword/resources/models/Hey-Shimi-Ryan1.pmdl"],
+                 phrase_callbacks=PHRASE_CALLBACKS,
                  default_callback=None,
                  on_wake=None, on_phrase=None,
                  respeaker=False, posenet=False, use_doa=False, manual_wake=False):
@@ -114,7 +224,9 @@ class WakeWord:
 
             # Pass the phrase to callback
             if self.on_phrase:
+                t = time.time()
                 self.on_phrase(self.shimi, phrase, audio_data, doa_value)
+                print("Time for phrase processing call [e.g. dialogue()]: %f" % (time.time() - t))
             else:
                 # Check callbacks for trigger words
                 found_callback = False

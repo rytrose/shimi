@@ -4,7 +4,7 @@ sys.path.insert(1, os.path.join(sys.path[0], 'shimiAudio'))
 from shimi import Shimi
 from motion.move import Alert
 from motion.generative_phrase import GenerativePhrase
-from wakeword.wakeword_activation import WakeWord
+from wakeword.wakeword_activation import WakeWord, WakeWordClient
 from wakeword.doa import DOA
 from demo import audio_response_demo
 from ctypes import *
@@ -44,31 +44,31 @@ def main():
         def dialogue(_, phrase, audio_data, doa_value):
             wav_filename, midi_filename, valence, arousal = audio_response_demo(phrase, audio_data[0], audio_data[1])
 
-            plt.title("Shimi Emotion")
-            plt.xlabel("Valence")
-            plt.ylabel("Arousal")
-            plt.xlim(-1.0, 1.0)
-            plt.ylim(-1.0, 1.0)
-            plt.scatter([valence], [arousal])
-            plt.xticks([0.0])
-            plt.yticks([0.0])
-            plt.grid(True)
-            print("VALENCE: %2f, AROUSAL: %.2f" % (valence, arousal))
-            plt.annotate("(%.2f, %.2f)" % (valence, arousal), xy=(valence, arousal - 0.05))
-
-            plt.savefig("val_aro.png")
-            Image.open("val_aro.png").show()
-            plt.clf()
+            # plt.title("Shimi Emotion")
+            # plt.xlabel("Valence")
+            # plt.ylabel("Arousal")
+            # plt.xlim(-1.0, 1.0)
+            # plt.ylim(-1.0, 1.0)
+            # plt.scatter([valence], [arousal])
+            # plt.xticks([0.0])
+            # plt.yticks([0.0])
+            # plt.grid(True)
+            # print("VALENCE: %2f, AROUSAL: %.2f" % (valence, arousal))
+            # plt.annotate("(%.2f, %.2f)" % (valence, arousal), xy=(valence, arousal - 0.05))
+            #
+            # plt.savefig("val_aro.png")
+            # Image.open("val_aro.png").show()
+            # plt.clf()
 
             # Force look straight ahead
             doa_value = 75
 
-            phrase_generator.generate("heymidi.mid", valence, arousal, wav_path="heyjude.mp3", doa_value=doa_value)
+            phrase_generator.generate(midi_filename, valence, arousal, wav_path=wav_filename, doa_value=doa_value)
 
         # Set up wakeword
         model_files = glob.glob("wakeword/resources/models/*.pmdl")
-        wakeword = WakeWord(shimi=shimi, models=model_files, on_wake=Alert,
-                            on_phrase=dialogue, respeaker=True, use_doa=True)#, manual_wake=True)
+        wakeword = WakeWordClient(shimi=shimi, models=model_files, on_wake=Alert,
+                            on_phrase=dialogue, respeaker=True, use_doa=True, manual_wake=False)
 
         wakeword.run()
 

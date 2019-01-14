@@ -75,6 +75,8 @@ class GenerativePhrase:
                     self.last_update = time.time()
 
     def generate(self, midi_path, valence, arousal, doa_value=None, wav_path=None):
+        t = time.time()
+
         # Analyze the MIDI
         self.midi_analysis = MidiAnalysis(midi_path)
         tempo = self.midi_analysis.get_tempo()
@@ -110,6 +112,8 @@ class GenerativePhrase:
         else:
             # For testing, play the MIDI file back
             self.midi_analysis.play()
+
+        print("Time to setup gesture generation: %f" % (time.time() - t))
 
         # Wait for all the moves to stop
         for move in moves:
