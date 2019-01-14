@@ -1,5 +1,6 @@
 import sys
 import os
+import io
 from ctypes import *
 import speech_recognition as sr
 from pythonosc import udp_client
@@ -9,6 +10,7 @@ import time
 import numpy as np
 import fileinput
 import threading
+
 
 # Used to catch and drop alsa warnings
 def py_error_handler(filename, line, function, err, fmt):
@@ -29,7 +31,9 @@ class SpeechRecognizerServer:
             self.snowboy_configuration = (snowboy_configuration[0], snowboy_configuration[1], self.on_hotword)
 
         # Look for ReSpeaker
-        for index, name in enumerate(sr.Microphone.list_microphone_names()):
+        mic_names = sr.Microphone.list_microphone_names()
+
+        for index, name in enumerate(mic_names):
             if len(name) > 8 and name[:9] == "ReSpeaker":
                 mic_index = index
             print("Microphone with name \"{1}\" found for `Microphone(device_index={0})`".format(index, name))

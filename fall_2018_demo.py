@@ -42,6 +42,7 @@ def main():
         # Use a closure to reference the phrase_generator
         # Used to take a phrase, give to generation code, and start gesture playback
         def dialogue(_, phrase, audio_data, doa_value):
+            print("Shimi heard: %s" % phrase)
             wav_filename, midi_filename, valence, arousal = audio_response_demo(phrase, audio_data[0], audio_data[1])
 
             # plt.title("Shimi Emotion")
