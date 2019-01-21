@@ -16,7 +16,7 @@ import numpy as np
 
 
 class GenerativePhrase:
-    def __init__(self, shimi=None, posenet=True):
+    def __init__(self, shimi=None, posenet=False):
         if shimi is not None:
             self.shimi = shimi
         else:
@@ -90,6 +90,8 @@ class GenerativePhrase:
         moves.append(torso)
         neck_ud = self.neck_ud_movement(length, valence, arousal, torso)
         moves.append(neck_ud)
+        phone = self.phone_movement(tempo, length, valence, arousal)
+        moves.append(phone)
 
         if not self.posenet:
             if not doa_value:
@@ -152,7 +154,6 @@ class GenerativePhrase:
                 t += move_dur
 
         return neck_lr_move
-
 
     def neck_ud_movement(self, length, valence, arousal, torso):
         # Note: ~0.2 of neck movement accounts for torso
@@ -330,5 +331,50 @@ class GenerativePhrase:
                           vel_algo_kwarg={'change_time': down_change_time},
                           delay=move_wait)
             t += 2 * (move_dur + move_wait)
+
+        return move
+
+    def phone_movement(self, tempo, length, valence, arousal):
+        # Calculate tempo of "sway" based on arousal
+        quantized_arousals = [-1, -0.5, 0, 1]
+        quantized_arousal = quantize(arousal, quantized_arousals)
+
+        # Higher arousal --> faster "swaying"
+        sway_periods = [4 * tempo, 2 * tempo, 2 * tempo, tempo]
+        sway_period = sway_periods[quantized_arousals.index(quantized_arousal)]
+
+        # Abs of arousal determines speed
+        abs_arousal = abs(arousal)
+        # Limit max speed to 50% of time
+        move_dur = denormalize_to_range(1.0 - abs_arousal, 0.5, 1.0) * sway_period
+
+        # If valence > 0 smooth movements with vel_algo
+        if valence > 0:
+            vel_algo = 'linear_ad'
+        else:
+            vel_algo = 'constant'
+
+        # Distance is controlled by quadrant
+        if valence >= 0 and arousal >= 0:
+            sway_width = denormalize_to_range(valence + arousal, 0.1, 0.5)
+        elif valence >= 0 and arousal < 0:
+            sway_width = denormalize_to_range(valence + abs(arousal), 0.5, 0.1)
+        elif valence < 0 and arousal >= 0:
+            sway_width = denormalize_to_range(abs(valence) + arousal, 0.5, 0.1)
+        else:
+            sway_width = denormalize_to_range(abs(valence) + abs(arousal), 0.1, 0.5)
+
+        # Direction to start is random
+        dir = random.choice([True, False])
+
+        move = Move(self.shimi, self.shimi.phone, 0.5 + (sway_width * [1, -1][int(dir)]), move_dur, vel_algo=vel_algo,
+                    initial_delay=sway_period - move_dur)
+
+        t = move_dur
+        while t < (length - sway_period):
+            dir = not dir
+            move.add_move(0.5 + (sway_width * [1, -1][int(dir)]), move_dur, delay=sway_period - move_dur,
+                          vel_algo=vel_algo)
+            t += sway_period
 
         return move
