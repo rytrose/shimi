@@ -6,6 +6,7 @@ from utils.utils import countdown
 import numpy as np
 import time
 import pickle
+from multiprocessing import Process
 
 
 class Recorder():
@@ -69,8 +70,12 @@ class Recorder():
         print("Done. Recorded {0} positions and {1} velocities.".format(len(self.positions), len(self.velocities)))
 
     def play(self, pos_ax=None, vel_ax=None, callback=None):
-        playback(self.shimi, self.motors, self.duration, self.timestamps, self.positions, self.velocities, pos_ax,
-                 vel_ax, callback=callback)
+        def closure():
+            playback(self.shimi, self.motors, self.duration, self.timestamps, self.positions, self.velocities, pos_ax,
+                     vel_ax, callback=callback)
+        p = Process(target=closure)
+        p.start()
+        p.join()
 
     def plot(self, ax):
         t = np.linspace(0, self.duration, len(self.positions))

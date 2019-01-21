@@ -5,7 +5,7 @@ import threading
 import time
 
 
-def play_outkast(shimi):
+def play_outkast(shimi, **kwargs):
     # Move to initial positions
     shimi.initial_position()
 
@@ -94,7 +94,7 @@ def play_outkast(shimi):
     mixer.music.play()
 
 
-def play_opera(shimi):
+def play_opera(shimi, **kwargs):
     # Move to initial positions
     shimi.initial_position()
 
@@ -102,7 +102,7 @@ def play_opera(shimi):
     mixer.init()
 
     # Load song
-    mixer.music.load('audio/opera.wav')
+    mixer.music.load('audio/opera_long.wav')
 
     # Load the movement
     r = load_recorder(shimi, "opera")

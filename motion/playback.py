@@ -84,7 +84,7 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
     # Start the gesture at the initial position it read
     moves = []
     for i, m in enumerate(motors):
-        move = Move(shimi, m, pos_matrix[0, i], 1.0)
+        move = Move(shimi, m, pos_matrix[0, i], 1.0, normalized_positions=False)
         moves.append(move)
 
     # Start all the moves
@@ -101,7 +101,7 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
     np.place(vel_matrix, vel_matrix < 1.0, 1.0)
 
     # Find the positions at which direction change happens, interpolated to INTERP_FREQ [s] increments
-    times_positions = [[[], []] for m in motors]
+    times_positions = [[[], []] for _ in motors]
     for i, _ in enumerate(motors):
         zero_pos = np.interp(0, timestamps, pos_matrix[:, i])
         first_pos = np.interp(INTERP_FREQ, timestamps, pos_matrix[:, i])
@@ -133,7 +133,7 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
         times_positions[i][POS_INDEX].append(pos_matrix[-1, i])
 
     # Use callback to alert start of playback
-    if callback:
+    if callback is not None:
         print("Starting motion, calling back...")
         callback()
 

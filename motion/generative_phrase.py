@@ -91,7 +91,9 @@ class GenerativePhrase:
         neck_ud = self.neck_ud_movement(length, valence, arousal, torso)
         moves.append(neck_ud)
 
-        if doa_value and not self.posenet:
+        if not self.posenet:
+            if not doa_value:
+                doa_value = 75
             neck_lr = self.neck_lr_doa_movement(tempo, length, doa_value, valence, arousal)
             moves.append(neck_lr)
 

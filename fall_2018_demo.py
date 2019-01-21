@@ -1,10 +1,12 @@
 import sys
 import os
+
 sys.path.insert(1, os.path.join(sys.path[0], 'shimiAudio'))
 from shimi import Shimi
 from motion.move import Alert
 from motion.generative_phrase import GenerativePhrase
 from wakeword.wakeword_activation import WakeWord, WakeWordClient
+from audio.audio_demos import play_opera
 from wakeword.doa import DOA
 from demo import audio_response_demo
 from ctypes import *
@@ -14,6 +16,7 @@ import time
 import matplotlib.pyplot as plt
 from PIL import Image
 import glob
+import random
 
 
 # Used to catch and drop alsa warnings
@@ -41,9 +44,12 @@ def main():
 
         # Use a closure to reference the phrase_generator
         # Used to take a phrase, give to generation code, and start gesture playback
-        def dialogue(_, phrase, audio_data, doa_value):
-            print("Shimi heard: %s" % phrase)
-            wav_filename, midi_filename, valence, arousal = audio_response_demo(phrase, audio_data[0], audio_data[1])
+        def dialogue(_, **kwargs):
+            print(kwargs)
+            print("Shimi heard: %s" % kwargs['phrase'])
+            wav_filename, midi_filename, valence, arousal = audio_response_demo(kwargs['phrase'],
+                                                                                kwargs['audio_data'][0],
+                                                                                kwargs['audio_data'][1])
 
             # plt.title("Shimi Emotion")
             # plt.xlabel("Valence")
@@ -61,21 +67,43 @@ def main():
             # Image.open("val_aro.png").show()
             # plt.clf()
 
-            # Force look straight ahead
-            doa_value = 75
+            phrase_generator.generate(midi_filename, valence, arousal, wav_path=wav_filename)
 
-            phrase_generator.generate(midi_filename, valence, arousal, wav_path=wav_filename, doa_value=doa_value)
+        def play_hey_jude(_, **kwargs):
+            _, _, valence, arousal = audio_response_demo(kwargs['phrase'],
+                                                         kwargs['audio_data'][0],
+                                                         kwargs['audio_data'][1])
+
+            phrase_generator.generate("heymidi.mid", valence, arousal, wav_path="heyjude.mp3")
+
+        def heard():
+            ping_file = "shimiAudio/audio/"
+            ping_file += random.choice(["ping1.wav", "ping2.wav", "ping3.wav"])
+            mixer.music.load(ping_file)
+            mixer.music.play()
+
+        phrase_callbacks = [
+            {
+                "triggers": ["play opera", "sing opera"],
+                "callback": play_opera,
+            },
+            {
+                "triggers": ["the beatles", "hey jude"],
+                "callback": play_hey_jude
+            }
+        ]
+
+        default_callback = {
+            "callback": dialogue
+        }
 
         # Set up wakeword
         model_files = glob.glob("wakeword/resources/models/*.pmdl")
-        wakeword = WakeWordClient(shimi=shimi, models=model_files, on_wake=Alert,
-                            on_phrase=dialogue, respeaker=True, use_doa=True, manual_wake=False)
+        wakeword = WakeWordClient(shimi=shimi, models=model_files, on_wake=Alert, on_phrase_heard=heard,
+                                  phrase_callbacks=phrase_callbacks, default_callback=default_callback, respeaker=True,
+                                  manual_wake=False)
 
         wakeword.run()
-
-        while True:
-            # Continue listening until keyboard interrupt
-            pass
 
     except KeyboardInterrupt as e:
         print("Exiting...", e)

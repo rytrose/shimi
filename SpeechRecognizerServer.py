@@ -53,6 +53,7 @@ class SpeechRecognizerServer:
         self.send_port = 5700
         self.client = udp_client.SimpleUDPClient(self.ip, self.send_port)
 
+    def run(self):
         with self.m as source:
             while True:
                 line = input()
@@ -167,3 +168,5 @@ if __name__ == "__main__":
 
     server = SpeechRecognizerServer(respeaker=args.respeaker, mic_index=args.mic_index,
                                     snowboy_configuration=snowboy_configuration)
+
+    server.run()
