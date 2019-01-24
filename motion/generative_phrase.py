@@ -74,7 +74,7 @@ class GenerativePhrase:
 
                     self.last_update = time.time()
 
-    def generate(self, midi_path, valence, arousal, doa_value=None, wav_path=None):
+    def generate(self, midi_path, valence, arousal, doa_value=None, wav_path=None, both=False):
         t = time.time()
 
         # Analyze the MIDI
@@ -90,7 +90,7 @@ class GenerativePhrase:
         moves.append(torso)
         neck_ud = self.neck_ud_movement(length, valence, arousal, torso)
         moves.append(neck_ud)
-        phone = self.phone_movement(tempo, length, valence, arousal)
+        phone = self.phone_movement_onsets(tempo, length, valence, arousal)
         moves.append(phone)
 
         if not self.posenet:
@@ -111,11 +111,15 @@ class GenerativePhrase:
         self.face_track = True
 
         # Play audio if given
-        if wav_path:
+        if wav_path and not both:
             mixer.music.play()
+        elif wav_path and both:
+            mixer.music.play()
+            self.midi_analysis.play()
         else:
             # For testing, play the MIDI file back
             self.midi_analysis.play()
+
 
         print("Time to setup gesture generation: %f" % (time.time() - t))
 
@@ -376,5 +380,59 @@ class GenerativePhrase:
             move.add_move(0.5 + (sway_width * [1, -1][int(dir)]), move_dur, delay=sway_period - move_dur,
                           vel_algo=vel_algo)
             t += sway_period
+
+        return move
+
+    def phone_movement_onsets(self, tempo, length, valence, arousal):
+        contour_notes = self.midi_analysis.get_normalized_pitch_contour()
+        onsets = [n["start"] for n in contour_notes]
+
+        print("ONSETS:", onsets)
+        print("LENGTH:", length)
+
+        # first component of speed
+        move_dist = denormalize_to_range((1 - abs(valence)), 0.2, 0.8)
+
+        quantized_arousals = [-1, -0.6, 0.6, 1]
+        quantized_arousal = quantize(arousal, quantized_arousals)
+        dur_lengths = [2 * tempo, 1 * tempo, 0.5 * tempo, 0.25 * tempo]
+
+        # second component of speed
+        move_dur = dur_lengths[quantized_arousals.index(quantized_arousal)]
+
+        # center the move, side_dist is the unused space on either side
+        side_dist = (1 - move_dist) / 2
+
+        # direction of movement is random, but consistent throughout the gesture
+        if random.choice([True, False]):
+            start_pos = side_dist
+            end_pos = 1 - side_dist
+        else:
+            start_pos = 1 - side_dist
+            end_pos = side_dist
+
+        # If valence > 0 smooth movements with vel_algo
+        if valence > 0:
+            vel_algo = 'linear_ad'
+        else:
+            vel_algo = 'constant'
+
+        move = Move(self.shimi, self.shimi.phone, start_pos, move_dur, vel_algo=vel_algo)
+        t = 0
+        print("Move:", t, "->", move_dur)
+        t = move_dur
+        while t < length:
+            while onsets and onsets[0] < t:
+                onsets.pop(0)
+            if onsets:
+                og_t = t
+                delay = onsets[0] - t
+                move.add_move(end_pos, move_dur, delay=delay)
+                move.add_move(start_pos, move_dur * 2)
+                t += delay + (3 * move_dur)
+                print("Move:", og_t + delay, "->", t)
+                onsets.pop(0)
+            else:
+                t = length
 
         return move
