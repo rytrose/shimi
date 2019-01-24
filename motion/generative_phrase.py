@@ -387,9 +387,6 @@ class GenerativePhrase:
         contour_notes = self.midi_analysis.get_normalized_pitch_contour()
         onsets = [n["start"] for n in contour_notes]
 
-        print("ONSETS:", onsets)
-        print("LENGTH:", length)
-
         # first component of speed
         move_dist = denormalize_to_range((1 - abs(valence)), 0.2, 0.8)
 
@@ -418,8 +415,6 @@ class GenerativePhrase:
             vel_algo = 'constant'
 
         move = Move(self.shimi, self.shimi.phone, start_pos, move_dur, vel_algo=vel_algo)
-        t = 0
-        print("Move:", t, "->", move_dur)
         t = move_dur
         while t < length:
             while onsets and onsets[0] < t:
@@ -430,7 +425,6 @@ class GenerativePhrase:
                 move.add_move(end_pos, move_dur, delay=delay)
                 move.add_move(start_pos, move_dur * 2)
                 t += delay + (3 * move_dur)
-                print("Move:", og_t + delay, "->", t)
                 onsets.pop(0)
             else:
                 t = length
