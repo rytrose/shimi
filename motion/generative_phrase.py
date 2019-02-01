@@ -420,7 +420,6 @@ class GenerativePhrase:
             while onsets and onsets[0] < t:
                 onsets.pop(0)
             if onsets:
-                og_t = t
                 delay = onsets[0] - t
                 move.add_move(end_pos, move_dur, delay=delay)
                 move.add_move(start_pos, move_dur * 2)

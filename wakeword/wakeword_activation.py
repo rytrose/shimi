@@ -9,6 +9,7 @@ import inspect
 import random
 import wakeword.snowboydecoder as snowboydecoder
 
+
 def generate_phrase(shimi, phrase, path):
     rand_valence = random.choice([-1, 1]) * random.random()
     rand_arousal = random.choice([-1, 1]) * random.random()
@@ -114,7 +115,7 @@ class WakeWordClient:
                         try:
                             if self.is_thread(phrase_callback["callback"]):
                                 running_callback = phrase_callback["callback"](self.shimi, phrase=phrase,
-                                                            audio_data=(audio_data, sample_rate))
+                                                                               audio_data=(audio_data, sample_rate))
                                 running_callback.start()
                                 running_callback.join()
                             else:
