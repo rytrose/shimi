@@ -9,7 +9,7 @@ import inspect
 import random
 import wakeword.snowboydecoder as snowboydecoder
 
-
+# Test!
 def generate_phrase(shimi, phrase, path):
     rand_valence = random.choice([-1, 1]) * random.random()
     rand_arousal = random.choice([-1, 1]) * random.random()
@@ -314,3 +314,4 @@ class WakeWord:
                 return False
         except:
             return False
+
