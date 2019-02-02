@@ -1,22 +1,35 @@
 from pyo import *
 import multiprocessing
 import time
+import threading
 
 
 class AudioAnalysis(multiprocessing.Process):
-    def __init__(self, connection):
+    def __init__(self, connection, duplex=True):
         super(AudioAnalysis, self).__init__()
         self.daemon = True
         self._terminated = False
         self._connection = connection
+        self.duplex = duplex
 
     def run(self):
-        self.server = Server(sr=16000, duplex=0)
-        self.server.setOutputDevice(2)
+        if self.duplex:
+            self.server = Server(sr=16000, ichnls=4)
+            self.server.setInOutDevice(2)
+        else:
+            self.server = Server(sr=16000, duplex=0)
+            self.server.setOutputDevice(2)
         self.server.deactivateMidi()
         self.server.boot().start()
 
-        a = PinkNoise(.1).mix(2).out()
+        threading.Thread(target=self.server.gui, args=locals()).start()
+
+        in_0 = Input(chnl=0, mul=0.25)
+        in_1 = Input(chnl=1, mul=0.25)
+        in_2 = Input(chnl=2, mul=0.25)
+        in_3 = Input(chnl=3, mul=0.25)
+        input = in_0 + in_1 + in_2 + in_3
+        scope = Scope(input)
 
         while not self._terminated:
             to_do = self._connection.recv()
@@ -43,57 +56,4 @@ if __name__ == '__main__':
     a.start()
 
     while True:
-        main_pipe.send({
-            "function": "test",
-            "args": ("sup",),
-            "kwargs": {
-                "my": "dude"
-            }
-        })
-
         time.sleep(1)
-
-# import time
-# import multiprocessing
-# from random import uniform
-# from pyo import Server, SineLoop
-#
-#
-# class Group(multiprocessing.Process):
-#     def __init__(self, num_of_sines):
-#         super(Group, self).__init__()
-#         self.daemon = True
-#         self._terminated = False
-#         self.num_of_sines = num_of_sines
-#
-#     def run(self):
-#         # All code that should run on a separated
-#         # core must be created in the run() method.
-#         self.server = Server(sr=16000, duplex=0)
-#         self.server.setOutputDevice(2)
-#         self.server.deactivateMidi()
-#         self.server.boot().start()
-#
-#         freqs = [uniform(400, 800) for i in range(self.num_of_sines)]
-#         self.oscs = SineLoop(freq=freqs, feedback=0.1, mul=.005).out()
-#
-#         # Keeps the process alive...
-#         while not self._terminated:
-#             time.sleep(0.001)
-#
-#         self.server.stop()
-#
-#     def stop(self):
-#         self._terminated = True
-#
-#
-# if __name__ == '__main__':
-#     # Starts four processes playing 500 oscillators each.
-#     jobs = [Group(500) for i in range(4)]
-#     [job.start() for job in jobs]
-#
-#
-#     def quit():
-#         "Stops the workers and quit the program."
-#         [job.stop() for job in jobs]
-#         exit()
