@@ -95,8 +95,11 @@ class GenerativePhrase:
 
         if not self.posenet:
             if not doa_value:
-                doa_value = 75
-            neck_lr = self.neck_lr_doa_movement(tempo, length, doa_value, valence, arousal)
+                print("Neck LR without DOA")
+                neck_lr = self.neck_lr_movement(tempo, length, valence, arousal)
+            else:
+                print("Neck LR WITH DOA")
+                neck_lr = self.neck_lr_doa_movement(tempo, length, doa_value, valence, arousal)
             moves.append(neck_lr)
 
         # Load wav file if given
@@ -119,7 +122,6 @@ class GenerativePhrase:
         else:
             # For testing, play the MIDI file back
             self.midi_analysis.play()
-
 
         print("Time to setup gesture generation: %f" % (time.time() - t))
 
@@ -159,6 +161,43 @@ class GenerativePhrase:
 
         return neck_lr_move
 
+    def neck_lr_movement(self, tempo, length, valence, arousal):
+        # Toiviainen (2-beat rotation of upper torso)
+        # Burger (High valence -> more rotation)
+        # Sievers (High valence and high arousal -> smoothness)
+        two_beat_dur = tempo * 2
+
+        normalized_valence = (valence + 1) / 2
+        rot_range = denormalize_to_range(normalized_valence, 0.2, 0.5)
+
+        vel_algo = 'constant'
+
+        if arousal >= 0:  # Continuous movement if arousal > 0
+            delay = 0
+            if valence >= 0:
+                vel_algo = 'linear_ad'
+            else:
+                two_beat_dur = tempo  # Angry shakes every beat
+        else:
+            if arousal >= -0.5:  # Wait a beat between movements
+                delay = tempo
+            else:  # Wait 2 beats between movements
+                delay = 2 * tempo
+
+        initial_pos = 0.5 + (rot_range / 2)  # To keep deterministic, look in positive directions first
+        neck_lr_move = Move(self.shimi, self.shimi.neck_lr, initial_pos, two_beat_dur / 2, vel_algo=vel_algo)
+
+        t = two_beat_dur / 2
+        dir = -1
+
+        while t < length:
+            new_pos = 0.5 + ((dir * rot_range) / 2)
+            neck_lr_move.add_move(new_pos, two_beat_dur, delay=delay)
+            t += (delay + two_beat_dur)
+            dir = dir * -1
+
+        return neck_lr_move
+
     def neck_ud_movement(self, length, valence, arousal, torso):
         # Note: ~0.2 of neck movement accounts for torso
         # looking straight: tor 0.7 neck 0.7, tor 0.8 neck 0.5, tor 0.9, neck 0.3
@@ -175,7 +214,8 @@ class GenerativePhrase:
         nod_wait = half_beat * denormalize_to_range(adjusted_arousal, 4, 1)
 
         # Start direction
-        direction = random.choice([-1, 1])
+        # direction = random.choice([-1, 1])
+        direction = 1  # To keep deterministic
 
         # Proportion of available range (limited by torso) that can be used
         pos_range = 0
