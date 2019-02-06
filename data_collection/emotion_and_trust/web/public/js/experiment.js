@@ -27,10 +27,21 @@ let onBegin = (event) => {
 
 let onQuadButton = (event) => {
     $('#chooseQuadrantContainer').hide();
-    $('#waiting').show();
     let id = quadrantIDs.indexOf(event.target.id);
     oscClient.send("/trial_result", id);
-    oscClient.send("/get_trial", []);
+
+    let timer = new Timer();
+    $('#timerContainer').show();
+    timer.start({countdown: true, startValues: {seconds: 5}});
+    $('#timer').html(timer.getTimeValues().seconds.toString()).fadeIn();
+    timer.addEventListener('secondsUpdated', function (e) {
+            $('#timer').html(timer.getTimeValues().seconds.toString());
+    });
+    timer.addEventListener('targetAchieved', function (e) {
+        $('#timerContainer').hide();
+        $('#waiting').show();
+        oscClient.send("/get_trial", []);
+    });
 }
 
 let onTrialStarted = (address, args) => {
