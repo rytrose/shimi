@@ -3,11 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <title>Shimi Experiment</title>
+    <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
 </head>
+
+<!--jQuery-->
+<script
+        src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+<!--OSC-->
+<script src="dependencies/osc-browser.min.js"></script>
+
+<!--timer-->
+<script src="dependencies/easytimer.min.js"></script>
+
 <body>
+
+<div class="content">
+    <div class="heading">
+        <h1 id="title">Shimi Experiment</h1>
+
+        <p id="description"><b>This will be the description of the experiment.</b> Lorem ipsum dolor sit amet,
+            consectetur
+            adipiscing
+            elit. Vivamus eget nulla vehicula, posuere ex eget, condimentum orci. Donec placerat sollicitudin mi, ut
+            eleifend
+            nunc gravida ac. Donec rutrum id enim ac accumsan. Aliquam tempor fermentum nulla, id condimentum mauris
+            blandit
+            in.
+            Sed blandit dui quis nisi iaculis tempus quis vitae erat. Phasellus sed luctus eros. Phasellus blandit nulla
+            arcu,
+            nec dictum sapien sodales vitae. In dignissim venenatis gravida. Curabitur quis orci consequat, luctus felis
+            id,
+            ultrices risus. Sed ornare, est sit amet molestie pharetra, lacus ante convallis sem, vitae auctor dolor
+            tortor
+            id
+            est.</p>
+    </div>
+
+    <div class="center" id="beginContainer">
+        <h2 id="beginInstruction">Press the button below to begin.</h2>
+        <form id="beginForm">
+            <input type="submit" value="Begin">
+        </form>
+    </div>
+
+    <div class="center" id="trialStartedContainer" style="display: none;">
+        <h2>Please observe Shimi.</h2>
+    </div>
+
+    <div class="center" id="chooseQuadrantContainer" style="display: none;">
+        <div class="buttonContainer" id="buttonContainer">
+            <button id="angry" class="quadButton">Angry</button>
+            <button id="happy" class="quadButton">Happy</button>
+            <button id="sad" class="quadButton">Sad</button>
+            <button id="calm" class="quadButton">Calm</button>
+        </div>
+    </div>
+
+    <div class="center" id="waiting" style="display: none;">
+        <p>Wait for the next trial to begin...</p>
+    </div>
+
+    <div class="center" id="complete" style="display: none;">
+        <p>The experiment is now complete. You may close this window.</p>
+    </div>
+
+</div>
+
 </body>
 
-<script src="dependencies/osc-browser.min.js"></script>
+
 <script src="js/osc-client.js"></script>
 <script src="js/experiment.js"></script>
 

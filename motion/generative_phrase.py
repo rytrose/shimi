@@ -74,7 +74,8 @@ class GenerativePhrase:
 
                     self.last_update = time.time()
 
-    def generate(self, midi_path, valence, arousal, doa_value=None, wav_path=None, both=False):
+    def generate(self, midi_path, valence, arousal, doa_value=None, wav_path=None, both=False, mute=False,
+                 random_movement=False, seed=None):
         t = time.time()
 
         # Analyze the MIDI
@@ -84,23 +85,36 @@ class GenerativePhrase:
 
         # Create the motor moves
         moves = []
-        foot = self.foot_movement(tempo, length, valence, arousal)
-        moves.append(foot)
-        torso = self.torso_movement(valence, arousal)
-        moves.append(torso)
-        neck_ud = self.neck_ud_movement(length, valence, arousal, torso)
-        moves.append(neck_ud)
-        phone = self.phone_movement_onsets(tempo, length, valence, arousal)
-        moves.append(phone)
 
-        if not self.posenet:
-            if not doa_value:
-                print("Neck LR without DOA")
-                neck_lr = self.neck_lr_movement(tempo, length, valence, arousal)
-            else:
-                print("Neck LR WITH DOA")
-                neck_lr = self.neck_lr_doa_movement(tempo, length, doa_value, valence, arousal)
+        if random_movement:
+            foot = self.random_movement(self.shimi.foot, length, seed)
+            moves.append(foot)
+            torso = self.random_movement(self.shimi.torso, length, seed + "a")
+            moves.append(torso)
+            neck_ud = self.random_movement(self.shimi.neck_ud, length, seed + "b")
+            moves.append(neck_ud)
+            phone = self.random_movement(self.shimi.phone, length, seed + "c")
+            moves.append(phone)
+            neck_lr = self.random_movement(self.shimi.neck_lr, length, seed + "d")
             moves.append(neck_lr)
+        else:
+            foot = self.foot_movement(tempo, length, valence, arousal)
+            moves.append(foot)
+            torso = self.torso_movement(valence, arousal)
+            moves.append(torso)
+            neck_ud = self.neck_ud_movement(length, valence, arousal, torso)
+            moves.append(neck_ud)
+            phone = self.phone_movement_onsets(tempo, length, valence, arousal)
+            moves.append(phone)
+
+            if not self.posenet:
+                if not doa_value:
+                    print("Neck LR without DOA")
+                    neck_lr = self.neck_lr_movement(tempo, length, valence, arousal)
+                else:
+                    print("Neck LR WITH DOA")
+                    neck_lr = self.neck_lr_doa_movement(tempo, length, doa_value, valence, arousal)
+                moves.append(neck_lr)
 
         # Load wav file if given
         if wav_path:
@@ -114,14 +128,15 @@ class GenerativePhrase:
         self.face_track = True
 
         # Play audio if given
-        if wav_path and not both:
-            mixer.music.play()
-        elif wav_path and both:
-            mixer.music.play()
-            self.midi_analysis.play()
-        else:
-            # For testing, play the MIDI file back
-            self.midi_analysis.play()
+        if not mute:
+            if wav_path and not both:
+                mixer.music.play()
+            elif wav_path and both:
+                mixer.music.play()
+                self.midi_analysis.play()
+            else:
+                # For testing, play the MIDI file back
+                self.midi_analysis.play()
 
         print("Time to setup gesture generation: %f" % (time.time() - t))
 
@@ -469,3 +484,21 @@ class GenerativePhrase:
                 t = length
 
         return move
+
+    def random_movement(self, motor, length, seed):
+        random.seed(seed)
+
+        move_pos = random.random()
+        move_dur = random.random() * length
+
+        t = move_dur
+
+        rand_move = Move(self.shimi, motor, move_pos, move_dur)
+
+        while t < length:
+            move_pos = random.random()
+            move_dur = random.random() * length
+            rand_move.add_move(move_pos, move_dur)
+            t += move_dur
+
+        return rand_move
