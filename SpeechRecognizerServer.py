@@ -82,31 +82,31 @@ class SpeechRecognizerServer:
                     if self.snowboy_configuration:
                         print("Running snowboy with listen timeout and phrase time limit.")
                         sys.stdout.flush()
-                        audio, _ = self.r.listen(source, snowboy_configuration=self.snowboy_configuration,
+                        audio = self.r.listen(source, snowboy_configuration=self.snowboy_configuration,
                                                  timeout=timeout, phrase_time_limit=phrase_time_limit)
                     else:
                         print("Running no hot word with listen timeout and phrase time limit.")
                         sys.stdout.flush()
-                        audio, _ = self.r.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+                        audio = self.r.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
                 else:
                     if self.snowboy_configuration:
                         print("Running snowboy with phrase time limit.")
                         sys.stdout.flush()
-                        audio, _ = self.r.listen(source, snowboy_configuration=self.snowboy_configuration,
+                        audio = self.r.listen(source, snowboy_configuration=self.snowboy_configuration,
                                                  phrase_time_limit=phrase_time_limit)
                     else:
                         print("Running no hot word with phrase time limit.")
                         sys.stdout.flush()
-                        audio, _ = self.r.listen(source, phrase_time_limit=phrase_time_limit)
+                        audio = self.r.listen(source, phrase_time_limit=phrase_time_limit)
             else:
                 if self.snowboy_configuration:
                     print("Running snowboy with no timeouts.")
                     sys.stdout.flush()
-                    audio, _ = self.r.listen(source, snowboy_configuration=self.snowboy_configuration)
+                    audio = self.r.listen(source, snowboy_configuration=self.snowboy_configuration)
                 else:
                     print("Running no hot word with no timeouts.")
                     sys.stdout.flush()
-                    audio, _ = self.r.listen(source)
+                    audio = self.r.listen(source)
             print("Time to collect phrase: %f" % (time.time() - t))
             sys.stdout.flush()
         except sr.WaitTimeoutError:

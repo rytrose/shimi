@@ -1,0 +1,31 @@
+body {
+    font-family: 'Lato', sans-serif;
+}
+
+.content {
+    margin: auto;
+    width: 90%;
+}
+
+.heading h1 {
+    text-align: center;
+}
+
+.center {
+    text-align: center;
+}
+
+.buttonContainer {
+    text-align: center;
+    width: 800px;
+    overflow-y: auto;
+}
+
+.buttonContainer > button {
+    text-align: center;
+    width: 300px;
+    height: 300px;
+    float: left;
+    background: lightgray;
+    margin: 40px;
+}

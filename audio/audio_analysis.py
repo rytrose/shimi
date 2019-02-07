@@ -51,8 +51,8 @@ class AudioAnalysisServer(multiprocessing.Process):
     def run(self):
         self.server = Server()
         pa_list_devices()
-        self.server.setInputDevice(3)
-        self.server.setOutputDevice(0)
+        self.server.setInputDevice(0)
+        self.server.setOutputDevice(1)
         # if self.duplex:
         #     self.server = Server(sr=16000, ichnls=4)
         #     self.server.setInOutDevice(2)
