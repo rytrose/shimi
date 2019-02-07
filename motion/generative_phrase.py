@@ -109,10 +109,8 @@ class GenerativePhrase:
 
             if not self.posenet:
                 if not doa_value:
-                    print("Neck LR without DOA")
                     neck_lr = self.neck_lr_movement(tempo, length, valence, arousal)
                 else:
-                    print("Neck LR WITH DOA")
                     neck_lr = self.neck_lr_doa_movement(tempo, length, doa_value, valence, arousal)
                 moves.append(neck_lr)
 
@@ -137,8 +135,6 @@ class GenerativePhrase:
             else:
                 # For testing, play the MIDI file back
                 self.midi_analysis.play()
-
-        print("Time to setup gesture generation: %f" % (time.time() - t))
 
         # Wait for all the moves to stop
         for move in moves:
@@ -199,7 +195,7 @@ class GenerativePhrase:
             else:  # Wait 2 beats between movements
                 delay = 2 * tempo
 
-        initial_pos = 0.5 + (rot_range / 2)  # To keep deterministic, look in positive directions first
+        initial_pos = 0.5 + (rot_range / 2)  # To keep deterministic for experiments, look in positive directions first
         neck_lr_move = Move(self.shimi, self.shimi.neck_lr, initial_pos, two_beat_dur / 2, vel_algo=vel_algo)
 
         t = two_beat_dur / 2
@@ -230,16 +226,20 @@ class GenerativePhrase:
 
         # Start direction
         # direction = random.choice([-1, 1])
-        direction = 1  # To keep deterministic
+        direction = 1  # To keep deterministic for experiments
 
         # Proportion of available range (limited by torso) that can be used
         pos_range = 0
         if arousal >= 0:
             # Shorter movements for lower positive arousal
             pos_range = denormalize_to_range(arousal, 0.4, 1.0)
+
+            # Burger (High valence -> high acceleration)
+            vel_algo = 'linear_ad'
         else:
             # Short movements for less negative arousal
             pos_range = denormalize_to_range(abs(arousal), 0.4, 1.0)
+            vel_algo = 'constant'
 
         # Keep track of timeline
         t = 0
@@ -249,7 +249,7 @@ class GenerativePhrase:
             t += half_beat
 
         pos = self.calculate_neck_ud_position(t, torso, torso_offset, pos_range, direction)
-        neck_ud_move = Move(self.shimi, self.shimi.neck_ud, pos, t)
+        neck_ud_move = Move(self.shimi, self.shimi.neck_ud, pos, t, vel_algo=vel_algo)
         last_move = t
         direction = not direction
 
@@ -278,6 +278,7 @@ class GenerativePhrase:
         return 1 - (offset + pos_in_range)
 
     def torso_movement(self, valence, arousal):
+        # Sievers (Valence --> leaning, derived from generated music contour, which inherently features this)
         contour_notes = self.midi_analysis.get_normalized_pitch_contour()
 
         # Higher valence --> more rapid matching to pitch contour
@@ -312,8 +313,8 @@ class GenerativePhrase:
 
         torso_move = Move(self.shimi, self.shimi.torso,
                           denormalize_to_range(first_note["norm_pitch"], torso_min, torso_max),
-                          first_note["start"],
-                          initial_delay=0,
+                          smoothing_time,
+                          initial_delay=first_note["start"] - smoothing_time,
                           vel_algo='constant')
 
         t = first_note["start"]
@@ -349,6 +350,7 @@ class GenerativePhrase:
         quantized_arousal = quantize(arousal, quantized_arousals)
 
         # Higher arousal --> smaller subdivision of tapping
+        # Toiviainen (1-beat, 2-beat mediolateral arm movements)
         beat_periods = [4 * tempo, 2 * tempo, tempo, 0.5 * tempo]
         beat_period = beat_periods[quantized_arousals.index(quantized_arousal)]
 
@@ -424,7 +426,8 @@ class GenerativePhrase:
             sway_width = denormalize_to_range(abs(valence) + abs(arousal), 0.1, 0.5)
 
         # Direction to start is random
-        dir = random.choice([True, False])
+        # dir = random.choice([True, False])
+        dir = True  # To keep deterministic for experiments
 
         move = Move(self.shimi, self.shimi.phone, 0.5 + (sway_width * [1, -1][int(dir)]), move_dur, vel_algo=vel_algo,
                     initial_delay=sway_period - move_dur)
@@ -456,7 +459,8 @@ class GenerativePhrase:
         side_dist = (1 - move_dist) / 2
 
         # direction of movement is random, but consistent throughout the gesture
-        if random.choice([True, False]):
+        # if random.choice([True, False]):
+        if True:  # To keep deterministic for experiments
             start_pos = side_dist
             end_pos = 1 - side_dist
         else:
