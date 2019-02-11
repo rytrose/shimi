@@ -3,6 +3,41 @@ import multiprocessing
 import time
 import threading
 
+LEFT = 0
+RIGHT = 1
+
+
+class Sample:
+    def __init__(self, path):
+        PVSIZE = 1024
+        PVOLAPS = 4
+
+        self.path = path
+        self.info = sndinfo(path)
+        self.NUM_FRAMES = self.info[0]
+        self.LENGTH = self.info[1]
+        self.SR = self.info[2]
+        self.snd_player = SfPlayer(self.path)
+
+        self.pv_analysis = PVAnal(self.snd_player, size=PVSIZE, overlaps=PVOLAPS)
+        self.speed_table = LinTable([(0, 1), (512, 1)], size=512)
+        self.speed_object = PVBufTabLoops(self.pv_analysis, self.speed_table, length=self.LENGTH)
+        self.trans_value = Sig(1)
+        self.trans_object = PVTranspose(self.speed_object, self.trans_value)
+        self.pv_synth = PVSynth(self.trans_object)
+
+    def play(self):
+        self.speed_object.reset()
+        self.pv_synth.out()
+
+    def stop(self):
+        self.pv_synth.stop()
+
+    def set_transposition(self, val):
+        self.trans_value.setValue(val)
+
+    def set_speed(self, val):
+        self.speed_table.replace([(0, val), (512, val)])
 
 class AudioAnalysisClient:
     def __init__(self):
@@ -51,7 +86,7 @@ class AudioAnalysisServer(multiprocessing.Process):
     def run(self):
         self.server = Server()
         pa_list_devices()
-        
+
         # Mac testing
         # self.server.setInputDevice(0)
         # self.server.setOutputDevice(1)
@@ -92,6 +127,9 @@ class AudioAnalysisServer(multiprocessing.Process):
 
     def get_freq_midi(self, *args, **kwargs):
         return self.freq_midi.get()
+
+    def sing(self, *args, **kwargs):
+        pass
 
 
 if __name__ == '__main__':
