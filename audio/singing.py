@@ -8,6 +8,7 @@ import os.path as op
 from subprocess import Popen, PIPE
 import soundfile as sf
 import pickle
+from pyo import *
 
 
 class MelodyExtraction:
@@ -55,6 +56,82 @@ class MelodyExtraction:
         melodia_data = pickle.load(open("melodia_" + self.name + ".p", "rb"))
         self.melodia_data = melodia_data["frequencies"]
         self.melodia_timestamps = melodia_data["timestamps"]
+
+
+class Singing:
+    def __init__(self, path, extraction_type, duplex=False):
+        self.path = path
+        self.server = Server()
+        pa_list_devices()
+
+        # Mac testing
+        self.server.setInputDevice(0)
+        self.server.setOutputDevice(1)
+        # if self.duplex:
+        #     self.server = Server(sr=16000, ichnls=4)
+        #     self.server.setInOutDevice(2)
+        # else:
+        #     self.server = Server(sr=16000, duplex=0)
+        #     self.server.setOutputDevice(2)
+        # self.server.deactivateMidi()
+        # self.server.boot().start()
+
+        self.melody_extraction = MelodyExtraction(self.path)
+        if extraction_type == "melodia":
+            self.melody_extraction.melodia_extraction()
+            self.melody_data = self.melody_extraction.melodia_data
+            self.melody_timestamps = self.melody_extraction.melodia_timestamps
+        else:
+            self.melody_extraction.deep_learning_extraction()
+            self.melody_data = self.melody_extraction.deep_learning_data
+            self.melody_timestamps = self.melody_extraction.deep_learning_timestamps
+
+        self.length_seconds = self.melody_extraction.length_seconds
+
+        self.speeds = []
+        current_start = -1
+        current_end = -1
+        for freq, time in zip(self.melody_data, self.melody_timestamps):
+            if freq > 0 and current_start < 0:
+                current_start = time
+            if freq <= 0 and current_start > 0:
+                current_end = time
+                speed = (current_end - current_start) / self.length_seconds
+                self.speeds.append(speed)
+                current_start = -1
+                current_end = -1
+        if current_start > 0 and current_end < 0:  # catch melody that doesn't end with silence
+            current_end = self.melody_timestamps[-1]
+            speed = (current_end - current_start) / self.length_seconds
+            self.speeds.append(speed)
+
+        self.frequency_table = DataTable(init=self.melody_data)
+        self.frequency_read = TableRead(self.frequency_table, freq=1/self.length_seconds)
+
+        self.start_vocal_thresh = Thresh(self.frequency_read, threshold=0.001, dir=0)
+        self.end_vocal_thresh = Thresh(self.frequency_read, threshold=0.001, dir=1)
+
+        self.start_vocal_func = TrigFunc(self.start_vocal_thresh, self.start_vocal)
+        self.end_vocal_func = TrigFunc(self.end_vocal_thresh, self.end_vocal)
+
+        self.vocal_path = "shimi_vocalization.wav"
+        self.shimi_sample = Sample(self.vocal_path, trans_value=self.frequency_read)
+        self.speed_index = 0
+
+        self.song_sample = Sample(self.path)
+
+    def start_vocal(self):
+        self.shimi_sample.set_speed(self.speeds[self.speed_index])
+        self.shimi_sample.play()
+        self.speed_index = (self.speed_index + 1) % len(self.speeds)
+
+    def end_vocal(self):
+        self.shimi_sample.stop()
+
+    def sing(self):
+        self.frequency_read.play()
+        self.song_sample.play()
+
 
 if __name__ == '__main__':
     me = MelodyExtraction('casey_jones.wav')
