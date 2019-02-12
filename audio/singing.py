@@ -17,7 +17,7 @@ class MelodyExtraction:
         self.path = path
         self.sound_data, self.sr = sf.read(self.path, always_2d=True)
         self.length_samples = self.sound_data.shape[0]
-        self.length_seconds = self.length_samples * (1 / self.length_samples)
+        self.length_seconds = self.length_samples * (1 / self.sr)
         self.abs_path = op.abspath(self.path)
         self.name = "_".join(self.abs_path.split('/')[-1].split('.')[:-1])
 
@@ -62,19 +62,20 @@ class MelodyExtraction:
 class Singing:
     def __init__(self, path, extraction_type, duplex=False):
         self.path = path
+        self.duplex = duplex
         self.server = Server()
         pa_list_devices()
 
         # Mac testing
-        self.server.setInputDevice(0)
-        self.server.setOutputDevice(1)
-        # if self.duplex:
-        #     self.server = Server(sr=16000, ichnls=4)
-        #     self.server.setInOutDevice(2)
-        # else:
-        #     self.server = Server(sr=16000, duplex=0)
-        #     self.server.setOutputDevice(2)
-        # self.server.deactivateMidi()
+        # self.server.setInputDevice(0)
+        # self.server.setOutputDevice(1)
+        if self.duplex:
+            self.server = Server(sr=16000, ichnls=4)
+            self.server.setInOutDevice(2)
+        else:
+            self.server = Server(sr=16000, duplex=0)
+            self.server.setOutputDevice(2)
+        self.server.deactivateMidi()
         self.server.boot().start()
 
         self.melody_extraction = MelodyExtraction(self.path)
@@ -106,17 +107,19 @@ class Singing:
             speed = (current_end - current_start) / self.length_seconds
             self.speeds.append(speed)
 
-        self.frequency_table = DataTable(len(self.melody_data), init=list(self.melody_data))
-        self.frequency_read = TableRead(self.frequency_table, freq=1 / self.length_seconds)
+        self.frequency_timestep = self.melody_timestamps[1] - self.melody_timestamps[0]
+        self.frequency_setter = Pattern(self.set_freq, time=self.frequency_timestep)
+        self.frequency_index = 0
+        self.prev_freq = -1
 
-        self.start_vocal_thresh = Thresh(self.frequency_read, threshold=0.001, dir=0)
-        self.end_vocal_thresh = Thresh(self.frequency_read, threshold=0.001, dir=1)
-
-        self.start_vocal_func = TrigFunc(self.start_vocal_thresh, self.start_vocal)
-        self.end_vocal_func = TrigFunc(self.end_vocal_thresh, self.end_vocal)
+        # self.start_vocal_thresh = Thresh(self.frequency_read, threshold=0.001, dir=0)
+        # self.end_vocal_thresh = Thresh(self.frequency_read, threshold=0.001, dir=1)
+        #
+        # self.start_vocal_func = TrigFunc(self.start_vocal_thresh, self.start_vocal)
+        # self.end_vocal_func = TrigFunc(self.end_vocal_thresh, self.end_vocal)
 
         self.vocal_path = "shimi_vocalization.wav"
-        self.shimi_sample = Sample(self.vocal_path, trans_value=self.frequency_read)
+        self.shimi_sample = Sample(self.vocal_path)
         self.speed_index = 0
 
         self.song_sample = Sample(self.path)
@@ -125,6 +128,18 @@ class Singing:
         for i in range(10):
             print("%d..." % (10 - i))
             time.sleep(1.0)
+
+    def set_freq(self):
+        new_freq = self.melody_data[self.frequency_index]
+        new_transposition = new_freq / 440
+        self.shimi_sample.set_transposition(new_transposition)
+
+        if self.prev_freq < 0 or (self.prev_freq <=0 and new_freq > 0):
+            self.start_vocal()
+        elif self.prev_freq > 0 and new_freq <= 0:
+            self.end_vocal()
+
+        self.frequency_index = (self.frequency_index + 1) % len(self.melody_data)
 
     def start_vocal(self):
         self.shimi_sample.set_speed(self.speeds[self.speed_index])
@@ -135,7 +150,7 @@ class Singing:
         self.shimi_sample.stop()
 
     def sing(self):
-        self.frequency_read.play()
+        self.frequency_setter.play()
         self.song_sample.play()
 
 
