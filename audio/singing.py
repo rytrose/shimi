@@ -31,31 +31,35 @@ class MelodyExtraction:
         self.melodia_timestamps = None
 
     def deep_learning_extraction(self):
-        command_string = "python3.5 " + op.join(self.deep_learning_path,
-                                                "VocalMelodyExtraction.py") + " --input_file " + self.abs_path + \
-                         " -m " + self.deep_learning_model_path + " --output_file " + "deep_learning_" + self.name
+        if not op.exists("deep_learning_" + self.name + ".txt"):
+            command_string = "python3.5 " + op.join(self.deep_learning_path,
+                                                    "VocalMelodyExtraction.py") + " --input_file " + self.abs_path + \
+                             " -m " + self.deep_learning_model_path + " --output_file " + "deep_learning_" + self.name
 
-        process = Popen(command_string.split(' '), stdout=PIPE, bufsize=1, universal_newlines=True)
+            process = Popen(command_string.split(' '), stdout=PIPE, bufsize=1, universal_newlines=True)
 
-        # Wait until the process is finished  to continue
-        for line in process.stdout.readline():
-            if line == "FINISHED":
-                print("Deep learning melody extraction complete.")
-                break
+            # Wait until the process is finished  to continue
+            for line in process.stdout.readline():
+                if line == "FINISHED":
+                    print("Deep learning melody extraction complete.")
+                    break
 
         deep_learning_data = np.loadtxt("deep_learning_" + self.name + ".txt")
         self.deep_learning_data = deep_learning_data[:, 1]
+        np.place(self.deep_learning_data, self.deep_learning_data <= 0, 0)
         num_points = self.deep_learning_data.shape[0]
         self.deep_learning_timestamps = [(i / num_points) * self.length_seconds for i in range(num_points)]
 
     def melodia_extraction(self):
-        command_string = "exagear -- " + op.join(self.run_melodia_path,
-                                                 "run_melodia.sh") + " " + self.abs_path + " " + self.name
+        if not op.exists("melodia_" + self.name + ".p"):
+            command_string = "exagear -- " + op.join(self.run_melodia_path,
+                                                     "run_melodia.sh") + " " + self.abs_path + " " + self.name
 
-        input("Please run the following in a new shell, and press enter when it is done:\n%s\n" % command_string)
+            input("Please run the following in a new shell, and press enter when it is done:\n%s\n" % command_string)
 
         melodia_data = pickle.load(open("melodia_" + self.name + ".p", "rb"))
         self.melodia_data = melodia_data["frequencies"]
+        np.place(self.melodia_data, self.melodia_data <= 0, 0)
         self.melodia_timestamps = melodia_data["timestamps"]
 
 
@@ -67,14 +71,14 @@ class Singing:
         pa_list_devices()
 
         # Mac testing
-        # self.server.setInputDevice(0)
-        # self.server.setOutputDevice(1)
-        if self.duplex:
-            self.server = Server(sr=16000, ichnls=4)
-            self.server.setInOutDevice(2)
-        else:
-            self.server = Server(sr=16000, duplex=0)
-            self.server.setOutputDevice(2)
+        self.server.setInputDevice(0)
+        self.server.setOutputDevice(1)
+        # if self.duplex:
+        #     self.server = Server(sr=16000, ichnls=4)
+        #     self.server.setInOutDevice(2)
+        # else:
+        #     self.server = Server(sr=16000, duplex=0)
+        #     self.server.setOutputDevice(2)
         self.server.deactivateMidi()
         self.server.boot().start()
 
@@ -90,6 +94,12 @@ class Singing:
 
         self.length_seconds = self.melody_extraction.length_seconds
 
+        self.vocal_path = "shimi_vocalization.wav"
+        self.shimi_sample = Sample(self.vocal_path)
+        self.speed_index = 0
+
+        self.song_sample = Sample(self.path, mul=0.2)
+
         self.speeds = []
         current_start = -1
         current_end = -1
@@ -98,7 +108,7 @@ class Singing:
                 current_start = timestamp
             if freq <= 0 and current_start > 0:
                 current_end = timestamp
-                speed = (current_end - current_start) / self.length_seconds
+                speed = (current_end - current_start) / self.shimi_sample.LENGTH
                 self.speeds.append(speed)
                 current_start = -1
                 current_end = -1
@@ -108,21 +118,9 @@ class Singing:
             self.speeds.append(speed)
 
         self.frequency_timestep = self.melody_timestamps[1] - self.melody_timestamps[0]
-        self.frequency_setter = Pattern(self.set_freq, time=self.frequency_timestep)
+        self.frequency_setter = Pattern(self.set_freq, time=float(self.frequency_timestep))
         self.frequency_index = 0
         self.prev_freq = -1
-
-        # self.start_vocal_thresh = Thresh(self.frequency_read, threshold=0.001, dir=0)
-        # self.end_vocal_thresh = Thresh(self.frequency_read, threshold=0.001, dir=1)
-        #
-        # self.start_vocal_func = TrigFunc(self.start_vocal_thresh, self.start_vocal)
-        # self.end_vocal_func = TrigFunc(self.end_vocal_thresh, self.end_vocal)
-
-        self.vocal_path = "shimi_vocalization.wav"
-        self.shimi_sample = Sample(self.vocal_path)
-        self.speed_index = 0
-
-        self.song_sample = Sample(self.path)
 
         print("Waiting for PV Analysis to be done...")
         for i in range(10):
@@ -131,7 +129,7 @@ class Singing:
 
     def set_freq(self):
         new_freq = self.melody_data[self.frequency_index]
-        new_transposition = new_freq / 440
+        new_transposition = float(new_freq / 440)
         self.shimi_sample.set_transposition(new_transposition)
 
         if self.prev_freq < 0 or (self.prev_freq <=0 and new_freq > 0):
@@ -139,6 +137,7 @@ class Singing:
         elif self.prev_freq > 0 and new_freq <= 0:
             self.end_vocal()
 
+        self.prev_freq = new_freq
         self.frequency_index = (self.frequency_index + 1) % len(self.melody_data)
 
     def start_vocal(self):
@@ -155,5 +154,5 @@ class Singing:
 
 
 if __name__ == '__main__':
-    s = Singing("casey_jones.wav", "melodia")
+    s = Singing("casey_jones.wav", "deep_learning")
     s.sing()

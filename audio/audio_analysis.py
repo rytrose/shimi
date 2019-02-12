@@ -8,7 +8,7 @@ RIGHT = 1
 
 
 class Sample:
-    def __init__(self, path):
+    def __init__(self, path, mul=1):
         PVSIZE = 1024
         PVOLAPS = 4
 
@@ -19,15 +19,12 @@ class Sample:
         self.SR = self.info[2]
         self.snd_player = SfPlayer(self.path)
 
-        import pdb
-        pdb.set_trace()
-
         self.pv_analysis = PVAnal(self.snd_player, size=PVSIZE, overlaps=PVOLAPS)
         self.speed_table = LinTable([(0, 1), (512, 1)], size=512)
         self.speed_object = PVBufTabLoops(self.pv_analysis, self.speed_table, length=self.LENGTH)
         self.trans_value = Sig(1)
         self.trans_object = PVTranspose(self.speed_object, transpo=self.trans_value)
-        self.pv_synth = PVSynth(self.trans_object)
+        self.pv_synth = PVSynth(self.trans_object, mul=mul)
 
     def play(self):
         self.speed_object.reset()
