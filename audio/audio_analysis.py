@@ -19,6 +19,9 @@ class Sample:
         self.SR = self.info[2]
         self.snd_player = SfPlayer(self.path)
 
+        import pdb
+        pdb.set_trace()
+
         self.pv_analysis = PVAnal(self.snd_player, size=PVSIZE, overlaps=PVOLAPS)
         self.speed_table = LinTable([(0, 1), (512, 1)], size=512)
         self.speed_object = PVBufTabLoops(self.pv_analysis, self.speed_table, length=self.LENGTH)
@@ -26,7 +29,7 @@ class Sample:
             self.trans_value = trans_value
         else:
             self.trans_value = Sig(1)
-        self.trans_object = PVTranspose(self.speed_object, self.trans_value)
+        self.trans_object = PVTranspose(self.speed_object, transpo=self.trans_value)
         self.pv_synth = PVSynth(self.trans_object)
 
     def play(self):

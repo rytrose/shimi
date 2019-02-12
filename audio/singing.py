@@ -75,7 +75,7 @@ class Singing:
         #     self.server = Server(sr=16000, duplex=0)
         #     self.server.setOutputDevice(2)
         # self.server.deactivateMidi()
-        # self.server.boot().start()
+        self.server.boot().start()
 
         self.melody_extraction = MelodyExtraction(self.path)
         if extraction_type == "melodia":
@@ -106,7 +106,7 @@ class Singing:
             speed = (current_end - current_start) / self.length_seconds
             self.speeds.append(speed)
 
-        self.frequency_table = DataTable(init=self.melody_data)
+        self.frequency_table = DataTable(len(self.melody_data), init=list(self.melody_data))
         self.frequency_read = TableRead(self.frequency_table, freq=1 / self.length_seconds)
 
         self.start_vocal_thresh = Thresh(self.frequency_read, threshold=0.001, dir=0)
