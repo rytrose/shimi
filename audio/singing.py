@@ -9,6 +9,7 @@ from subprocess import Popen, PIPE
 import soundfile as sf
 import pickle
 from pyo import *
+import time
 
 
 class MelodyExtraction:
@@ -91,11 +92,11 @@ class Singing:
         self.speeds = []
         current_start = -1
         current_end = -1
-        for freq, time in zip(self.melody_data, self.melody_timestamps):
+        for freq, timestamp in zip(self.melody_data, self.melody_timestamps):
             if freq > 0 and current_start < 0:
-                current_start = time
+                current_start = timestamp
             if freq <= 0 and current_start > 0:
-                current_end = time
+                current_end = timestamp
                 speed = (current_end - current_start) / self.length_seconds
                 self.speeds.append(speed)
                 current_start = -1
@@ -106,7 +107,7 @@ class Singing:
             self.speeds.append(speed)
 
         self.frequency_table = DataTable(init=self.melody_data)
-        self.frequency_read = TableRead(self.frequency_table, freq=1/self.length_seconds)
+        self.frequency_read = TableRead(self.frequency_table, freq=1 / self.length_seconds)
 
         self.start_vocal_thresh = Thresh(self.frequency_read, threshold=0.001, dir=0)
         self.end_vocal_thresh = Thresh(self.frequency_read, threshold=0.001, dir=1)
@@ -119,6 +120,11 @@ class Singing:
         self.speed_index = 0
 
         self.song_sample = Sample(self.path)
+
+        print("Waiting for PV Analysis to be done...")
+        for i in range(10):
+            print("%d..." % (10 - i))
+            time.sleep(1.0)
 
     def start_vocal(self):
         self.shimi_sample.set_speed(self.speeds[self.speed_index])
@@ -134,7 +140,5 @@ class Singing:
 
 
 if __name__ == '__main__':
-    me = MelodyExtraction('casey_jones.wav')
-    me.deep_learning_extraction()
-    me.melodia_extraction()
-    print(me.melodia_data, me.melodia_timestamps)
+    s = Singing("casey_jones.wav", "melodia")
+    s.sing()
