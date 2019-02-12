@@ -8,7 +8,7 @@ RIGHT = 1
 
 
 class Sample:
-    def __init__(self, path, trans_value=None):
+    def __init__(self, path):
         PVSIZE = 1024
         PVOLAPS = 4
 
@@ -25,10 +25,7 @@ class Sample:
         self.pv_analysis = PVAnal(self.snd_player, size=PVSIZE, overlaps=PVOLAPS)
         self.speed_table = LinTable([(0, 1), (512, 1)], size=512)
         self.speed_object = PVBufTabLoops(self.pv_analysis, self.speed_table, length=self.LENGTH)
-        if trans_value:
-            self.trans_value = Sig(trans_value)
-        else:
-            self.trans_value = Sig(1)
+        self.trans_value = Sig(1)
         self.trans_object = PVTranspose(self.speed_object, transpo=self.trans_value)
         self.pv_synth = PVSynth(self.trans_object)
 
