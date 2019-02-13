@@ -219,5 +219,5 @@ class Singing:
 
 
 if __name__ == '__main__':
-    s = Singing("skinny_love.wav", "melodia")
+    s = Singing("skinny_love.wav", "deep")
     s.sing()
