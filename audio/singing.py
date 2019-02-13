@@ -71,14 +71,14 @@ class Singing:
         pa_list_devices()
 
         # Mac testing
-        self.server.setInputDevice(0)
-        self.server.setOutputDevice(1)
-        # if self.duplex:
-        #     self.server = Server(sr=16000, ichnls=4)
-        #     self.server.setInOutDevice(2)
-        # else:
-        #     self.server = Server(sr=16000, duplex=0)
-        #     self.server.setOutputDevice(2)
+        # self.server.setInputDevice(0)
+        # self.server.setOutputDevice(1)
+        if self.duplex:
+            self.server = Server(sr=16000, ichnls=4)
+            self.server.setInOutDevice(2)
+        else:
+            self.server = Server(sr=16000, duplex=0)
+            self.server.setOutputDevice(2)
         self.server.deactivateMidi()
         self.server.boot().start()
 
@@ -98,7 +98,7 @@ class Singing:
         self.shimi_sample = Sample(self.vocal_path)
         self.speed_index = 0
 
-        self.song_sample = Sample(self.path, mul=0.2)
+        self.song_sample = SfPlayer(self.path, mul=0.3)
 
         self.speeds = []
         current_start = -1
@@ -123,8 +123,9 @@ class Singing:
         self.prev_freq = -1
 
         print("Waiting for PV Analysis to be done...")
-        for i in range(10):
-            print("%d..." % (10 - i))
+        wait_time = 3
+        for i in range(wait_time):
+            print("%d..." % (wait_time - i))
             time.sleep(1.0)
 
     def set_freq(self):
@@ -138,6 +139,12 @@ class Singing:
             self.end_vocal()
 
         self.prev_freq = new_freq
+
+        if self.frequency_index == len(self.melody_data) - 1: #  Stop it because otherwise it will loop forever
+            self.frequency_setter.stop()
+            self.shimi_sample.stop()
+            self.song_sample.stop()
+
         self.frequency_index = (self.frequency_index + 1) % len(self.melody_data)
 
     def start_vocal(self):
@@ -150,9 +157,9 @@ class Singing:
 
     def sing(self):
         self.frequency_setter.play()
-        self.song_sample.play()
+        self.song_sample.out()
 
 
 if __name__ == '__main__':
-    s = Singing("casey_jones.wav", "deep_learning")
+    s = Singing("skinny_love.wav", "melodia")
     s.sing()
