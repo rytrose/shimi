@@ -24,11 +24,13 @@ class Sample:
         self.speed_object = PVBufTabLoops(self.pv_analysis, self.speed_table, length=self.LENGTH)
         self.trans_value = SigTo(1, time=0.005)
         self.trans_object = PVTranspose(self.speed_object, transpo=self.trans_value)
-        self.pv_synth = PVSynth(self.trans_object, mul=mul)
+        self.adsr = Adsr(mul=mul)
+        self.pv_synth = PVSynth(self.trans_object, mul=self.adsr)
 
     def play(self):
         self.speed_object.reset()
         self.pv_synth.out()
+        self.adsr.play()
 
     def stop(self):
         self.pv_synth.stop()

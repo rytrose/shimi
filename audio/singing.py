@@ -78,7 +78,7 @@ class MelodyExtraction:
                 timestamps_without_zeros.append(timestamp)
 
         data_len = len(melody_data)
-        delta = self.tempo / 10
+        delta = self.tempo / 12
 
         timestamps_to_interpolate = []
         i = 0
@@ -186,6 +186,15 @@ class Singing:
 
     def set_freq(self):
         new_freq = self.melody_data[self.frequency_index]
+
+        if new_freq != 0:  # clamp frequencies to appropriate range
+            if new_freq < 150:
+                while new_freq < 150:
+                    new_freq = new_freq * 2
+            elif new_freq > 600:
+                while new_freq > 600:
+                    new_freq = new_freq / 2
+
         new_transposition = float(new_freq / 440)
         self.shimi_sample.set_transposition(new_transposition)
 
@@ -219,5 +228,5 @@ class Singing:
 
 
 if __name__ == '__main__':
-    s = Singing("skinny_love.wav", "deep")
+    s = Singing("casey_jones.wav", "melodia")
     s.sing()
