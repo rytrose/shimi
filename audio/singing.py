@@ -9,13 +9,16 @@ from subprocess import Popen, PIPE
 import soundfile as sf
 import pickle
 from pyo import *
+from librosa.beat import tempo as estimate_tempo
 import time
+import random
 
 
 class MelodyExtraction:
     def __init__(self, path):
         self.path = path
         self.sound_data, self.sr = sf.read(self.path, always_2d=True)
+        self.tempo = estimate_tempo(self.sound_data[:, 1], self.sr)[0] / 60
         self.length_samples = self.sound_data.shape[0]
         self.length_seconds = self.length_samples * (1 / self.sr)
         self.abs_path = op.abspath(self.path)
@@ -49,6 +52,8 @@ class MelodyExtraction:
         np.place(self.deep_learning_data, self.deep_learning_data <= 0, 0)
         num_points = self.deep_learning_data.shape[0]
         self.deep_learning_timestamps = [(i / num_points) * self.length_seconds for i in range(num_points)]
+        self.deep_learning_data, self.deep_learning_timestamps = self.process_data(self.deep_learning_data,
+                                                                                   self.deep_learning_timestamps)
 
     def melodia_extraction(self):
         if not op.exists("melodia_" + self.name + ".p"):
@@ -59,8 +64,50 @@ class MelodyExtraction:
 
         melodia_data = pickle.load(open("melodia_" + self.name + ".p", "rb"))
         self.melodia_data = melodia_data["frequencies"]
-        np.place(self.melodia_data, self.melodia_data <= 0, 0)
         self.melodia_timestamps = melodia_data["timestamps"]
+        self.melodia_data, self.melodia_timestamps = self.process_data(self.melodia_data, self.melodia_timestamps)
+
+    def process_data(self, melody_data, timestamps):
+        np.place(melody_data, melody_data <= 0, 0)
+        data_without_zeros = []
+        timestamps_without_zeros = []
+
+        for freq, timestamp in zip(melody_data, timestamps):
+            if freq > 0:
+                data_without_zeros.append(freq)
+                timestamps_without_zeros.append(timestamp)
+
+        data_len = len(melody_data)
+        delta = self.tempo / 10
+
+        timestamps_to_interpolate = []
+        i = 0
+        j = 0
+        while melody_data[i] < 0:  # Move to first vocalization
+            i += 1
+            j += 1
+
+        while i < data_len:
+            while i < data_len and melody_data[i] > 0:
+                i += 1
+                j += 1
+            # current frequency is 0
+            while j < data_len and melody_data[j] <= 0:
+                j += 1
+            # current frequency is not 0
+            if j < data_len:
+                if timestamps[j] - timestamps[i] < delta:
+                    for t in range(i, j):
+                        timestamps_to_interpolate.append(timestamps[t])
+            i = j
+
+        print("Interpolating %d points." % len(timestamps_to_interpolate))
+
+        interpolated_values = np.interp(timestamps_to_interpolate, timestamps_without_zeros, data_without_zeros)
+        for i, val in enumerate(interpolated_values):
+            melody_data[np.where(timestamps == timestamps_to_interpolate[i])[0]] = val
+
+        return melody_data, timestamps
 
 
 class Singing:
@@ -71,14 +118,14 @@ class Singing:
         pa_list_devices()
 
         # Mac testing
-        # self.server.setInputDevice(0)
-        # self.server.setOutputDevice(1)
-        if self.duplex:
-            self.server = Server(sr=16000, ichnls=4)
-            self.server.setInOutDevice(2)
-        else:
-            self.server = Server(sr=16000, duplex=0)
-            self.server.setOutputDevice(2)
+        self.server.setInputDevice(1)
+        self.server.setOutputDevice(0)
+        # if self.duplex:
+        #     self.server = Server(sr=16000, ichnls=4)
+        #     self.server.setInOutDevice(2)
+        # else:
+        #     self.server = Server(sr=16000, duplex=0)
+        #     self.server.setOutputDevice(2)
         self.server.deactivateMidi()
         self.server.boot().start()
 
@@ -94,11 +141,20 @@ class Singing:
 
         self.length_seconds = self.melody_extraction.length_seconds
 
-        self.vocal_path = "shimi_vocalization.wav"
-        self.shimi_sample = Sample(self.vocal_path)
+        self.shimi_samples = []
+
+        self.vocal_paths = ["shimi_vocalization.wav", "shimi_vocalization2.wav", "shimi_vocalization3.wav",
+                            "shimi_vocalization4.wav"]
+
+        for path in self.vocal_paths:
+            shimi_sample = Sample(path)
+            self.shimi_samples.append(shimi_sample)
+
+        self.shimi_sample = random.choice(self.shimi_samples)
+
         self.speed_index = 0
 
-        self.song_sample = SfPlayer(self.path, mul=0.3)
+        self.song_sample = SfPlayer(self.path, mul=0.2)
 
         self.speeds = []
         current_start = -1
@@ -108,19 +164,19 @@ class Singing:
                 current_start = timestamp
             if freq <= 0 and current_start > 0:
                 current_end = timestamp
-                speed = (current_end - current_start) / self.shimi_sample.LENGTH
+                speed = self.shimi_sample.LENGTH / (current_end - current_start)
                 self.speeds.append(speed)
                 current_start = -1
                 current_end = -1
         if current_start > 0 and current_end < 0:  # catch melody that doesn't end with silence
             current_end = self.melody_timestamps[-1]
-            speed = (current_end - current_start) / self.length_seconds
+            speed = self.shimi_sample.LENGTH / (current_end - current_start)
             self.speeds.append(speed)
 
         self.frequency_timestep = self.melody_timestamps[1] - self.melody_timestamps[0]
         self.frequency_setter = Pattern(self.set_freq, time=float(self.frequency_timestep))
-        self.frequency_index = 0
-        self.prev_freq = -1
+        self.frequency_index = 1
+        self.prev_freq = self.melody_data[0]
 
         print("Waiting for PV Analysis to be done...")
         wait_time = 3
@@ -133,16 +189,17 @@ class Singing:
         new_transposition = float(new_freq / 440)
         self.shimi_sample.set_transposition(new_transposition)
 
-        if self.prev_freq < 0 or (self.prev_freq <=0 and new_freq > 0):
+        if self.prev_freq <= 0 and new_freq > 0:
             self.start_vocal()
         elif self.prev_freq > 0 and new_freq <= 0:
             self.end_vocal()
 
         self.prev_freq = new_freq
 
-        if self.frequency_index == len(self.melody_data) - 1: #  Stop it because otherwise it will loop forever
+        if self.frequency_index == len(self.melody_data) - 1:  # Stop it because otherwise it will loop forever
             self.frequency_setter.stop()
-            self.shimi_sample.stop()
+            for s in self.shimi_samples:
+                s.stop()
             self.song_sample.stop()
 
         self.frequency_index = (self.frequency_index + 1) % len(self.melody_data)
@@ -154,6 +211,7 @@ class Singing:
 
     def end_vocal(self):
         self.shimi_sample.stop()
+        self.shimi_sample = random.choice(self.shimi_samples)
 
     def sing(self):
         self.frequency_setter.play()
