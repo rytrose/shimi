@@ -3,15 +3,19 @@ import os, sys
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from audio.audio_analysis import Sample
+import pretty_midi as pm
 import numpy as np
 import os.path as op
 from subprocess import Popen, PIPE
 import soundfile as sf
 import pickle
 from pyo import *
+from librosa.core import midi_to_hz, hz_to_midi
 from librosa.beat import tempo as estimate_tempo
+from librosa.effects import time_stretch, pitch_shift
 import time
 import random
+import argparse
 
 
 class MelodyExtraction:
@@ -111,24 +115,35 @@ class MelodyExtraction:
 
 
 class Singing:
-    def __init__(self, path, extraction_type, duplex=False):
+    def __init__(self, path, duplex=False):
         self.path = path
+        self.song_length_in_samples, self.song_length_in_seconds, self.song_sr, _, _, _ = sndinfo(self.path)
+        self.song_length_in_samples = int(self.song_length_in_samples)
+        self.song_sr = int(self.song_sr)
         self.duplex = duplex
         self.server = Server()
+        self.vocal_paths = ["shimi_vocalization.wav", "shimi_vocalization2.wav", "shimi_vocalization3.wav",
+                            "shimi_vocalization4.wav"]
+        self.shimi_audio_samples = []
+        self.shimi_midi_samples = []
+
         pa_list_devices()
 
         # Mac testing
-        self.server.setInputDevice(1)
-        self.server.setOutputDevice(0)
-        # if self.duplex:
-        #     self.server = Server(sr=16000, ichnls=4)
-        #     self.server.setInOutDevice(2)
-        # else:
-        #     self.server = Server(sr=16000, duplex=0)
-        #     self.server.setOutputDevice(2)
+        # self.server.setInputDevice(1)
+        # self.server.setOutputDevice(0)
+        if self.duplex:
+            self.server = Server(sr=16000, ichnls=4)
+            self.server.setInOutDevice(2)
+        else:
+            self.server = Server(sr=16000, duplex=0)
+            self.server.setOutputDevice(2)
         self.server.deactivateMidi()
         self.server.boot().start()
 
+        self.song_sample = SfPlayer(self.path, mul=0.2)
+
+    def audio_initialize(self, extraction_type):
         self.melody_extraction = MelodyExtraction(self.path)
         if extraction_type == "melodia":
             self.melody_extraction.melodia_extraction()
@@ -141,20 +156,13 @@ class Singing:
 
         self.length_seconds = self.melody_extraction.length_seconds
 
-        self.shimi_samples = []
-
-        self.vocal_paths = ["shimi_vocalization.wav", "shimi_vocalization2.wav", "shimi_vocalization3.wav",
-                            "shimi_vocalization4.wav"]
-
         for path in self.vocal_paths:
             shimi_sample = Sample(path)
-            self.shimi_samples.append(shimi_sample)
+            self.shimi_audio_samples.append(shimi_sample)
 
         self.shimi_sample = random.choice(self.shimi_samples)
 
         self.speed_index = 0
-
-        self.song_sample = SfPlayer(self.path, mul=0.2)
 
         self.speeds = []
         current_start = -1
@@ -222,11 +230,57 @@ class Singing:
         self.shimi_sample.stop()
         self.shimi_sample = random.choice(self.shimi_samples)
 
-    def sing(self):
+    def sing_audio(self, extraction_type):
+        self.audio_initialize(extraction_type)
         self.frequency_setter.play()
         self.song_sample.out()
 
+    def sing_midi(self, midi_path):
+        self.name = "_".join(self.path.split('/')[-1].split('.')[:-1])
+        midi_wav_path = self.name + "_midi.wav"
+        if not op.exists(midi_wav_path):
+            pm_object = pm.PrettyMIDI(midi_path)
+            notes = pm_object.instruments[0].notes
+            shimi_voice_sr = None
+            shimi_sample_length_in_seconds = None
+            final_sample = np.zeros((self.song_length_in_samples, 2))
+
+
+            for f in self.vocal_paths:
+                y, shimi_voice_sr = sf.read(f, always_2d=True)
+                shimi_sample_length_in_seconds = y.shape[0] * (1 / shimi_voice_sr)
+                self.shimi_midi_samples.append(y[:, 0])
+
+            for n in notes:
+                start = n.start
+                end = n.end
+                length = end - start
+                speed = shimi_sample_length_in_seconds / length
+                stretched = time_stretch(random.choice(self.shimi_midi_samples), speed)
+                stretched_and_shifted = pitch_shift(stretched, shimi_voice_sr, n_steps=n.pitch - 69)
+                start_s = int(start * self.song_sr)
+                end_s = min(int(end * self.song_sr), self.song_length_in_samples)
+
+                if end_s - start_s > len(stretched_and_shifted):
+                    end_s = start_s + len(stretched_and_shifted)
+
+                # Make it evenly stereo
+                samples = stretched_and_shifted[0:end_s - start_s]
+                final_sample[start_s:end_s, 0] = samples
+                final_sample[start_s:end_s, 1] = samples
+            sf.write(self.name + "_midi.wav", final_sample, self.song_sr)
+
+        self.singing_sample = SfPlayer(midi_wav_path)
+        self.singing_sample.play()
+        self.song_sample.play()
+
 
 if __name__ == '__main__':
-    s = Singing("casey_jones.wav", "melodia")
-    s.sing()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--input_file", type=str, default="skinny_love.wav")
+    parser.add_argument("-m", "--midi_file", type=str, default="casey_jones.mid")
+    args = parser.parse_args()
+
+    s = Singing(args.input_file)
+    s.sing_midi(args.midi_file)
+    # s.sing_audio("deep_learning")
