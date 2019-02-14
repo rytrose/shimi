@@ -19,6 +19,6 @@ timestamps = 8 * 128 / 44100.0 + np.arange(len(frequencies)) * (128 / 44100.0)
 pickle.dump({
     "frequencies": frequencies,
     "timestamps": timestamps
-}, open("/home/nvidia/shimi/audio/melodia_" + args.output_filename + ".p", "wb+"))
+}, open("/home/nvidia/shimi/audio/melodia_outputs/melodia_" + args.output_filename + ".p", "wb+"))
 
 print("FINISHED")
