@@ -245,7 +245,6 @@ class Singing:
             shimi_sample_length_in_seconds = None
             final_sample = np.zeros((self.song_length_in_samples, 2))
 
-
             for f in self.vocal_paths:
                 y, shimi_voice_sr = sf.read(f, always_2d=True)
                 shimi_sample_length_in_seconds = y.shape[0] * (1 / shimi_voice_sr)
@@ -277,10 +276,8 @@ class Singing:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input_file", type=str, default="skinny_love.wav")
+    parser.add_argument("-i", "--input_file", type=str, default="casey_jones.wav")
     parser.add_argument("-m", "--midi_file", type=str, default="casey_jones.mid")
     args = parser.parse_args()
 
     s = Singing(args.input_file)
-    s.sing_midi(args.midi_file)
-    # s.sing_audio("deep_learning")

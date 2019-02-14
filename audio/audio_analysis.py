@@ -101,15 +101,15 @@ class AudioAnalysisServer(multiprocessing.Process):
         self.server.deactivateMidi()
         self.server.boot().start()
 
-        in_0 = Input(chnl=0, mul=1)
-        in_1 = Input(chnl=1, mul=1)
-        in_mono = in_0 + in_1
-        # _ = in_mono.mix(2).out()
-        # delayed = Delay(in_mono, delay=4, maxdelay=4).mix(2).out()
-        in_analysis = 15 * in_mono
+        # If input, do some analysis
+        if duplex:
+            in_0 = Input(chnl=0, mul=1)
+            in_1 = Input(chnl=1, mul=1)
+            in_mono = in_0 + in_1
+            in_analysis = 15 * in_mono
 
-        self.freq_hz = Yin(in_analysis)
-        self.freq_midi = FToM(self.freq_hz)
+            self.freq_hz = Yin(in_analysis)
+            self.freq_midi = FToM(self.freq_hz)
 
         while not self._terminated:
             to_do = self._connection.recv()
@@ -129,9 +129,6 @@ class AudioAnalysisServer(multiprocessing.Process):
 
     def get_freq_midi(self, *args, **kwargs):
         return self.freq_midi.get()
-
-    def sing(self, *args, **kwargs):
-        pass
 
 
 if __name__ == '__main__':
