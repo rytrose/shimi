@@ -15,6 +15,7 @@ from librosa.effects import time_stretch, pitch_shift
 import time
 import random
 import glob
+import argparse
 
 
 class MelodyExtraction:
@@ -118,23 +119,24 @@ class MelodyExtraction:
 
 
 class Singing:
-    def __init__(self, duplex=False):
+    def __init__(self, init_pyo=False, duplex=False):
         self.duplex = duplex
-        self.server = Server()
         self.vocal_paths = glob.glob(op.join("audio_files", "shimi_vocalizations", "*"))
 
-        pa_list_devices()
+        if init_pyo:
+            self.server = Server()
+            pa_list_devices()
 
-        # Mac testing
-        # self.server = Server()
-        if self.duplex:
-            self.server = Server(sr=16000, ichnls=4)
-            self.server.setInOutDevice(2)
-        else:
-            self.server = Server(sr=16000, duplex=0)
-            self.server.setOutputDevice(2)
-        self.server.deactivateMidi()
-        self.server.boot().start()
+            # Mac testing
+            self.server = Server()
+            # if self.duplex:
+            #     self.server = Server(sr=16000, ichnls=4)
+            #     self.server.setInOutDevice(2)
+            # else:
+            #     self.server = Server(sr=16000, duplex=0)
+            #     self.server.setOutputDevice(2)
+            self.server.deactivateMidi()
+            self.server.boot().start()
 
     def audio_initialize(self, audio_path, extraction_type="cnn"):
         self.path = audio_path
@@ -276,4 +278,7 @@ class Singing:
 
 
 if __name__ == '__main__':
-    s = Singing()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--pyo", action="store_true", default=False)
+    args = parser.parse_args()
+    s = Singing(init_pyo=args.pyo)
