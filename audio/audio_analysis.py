@@ -41,6 +41,7 @@ class Sample:
     def set_speed(self, val):
         self.speed_table.replace([(0, val), (512, val)])
 
+
 class AudioAnalysisClient:
     def __init__(self):
         (self.client_pipe, self.server_pipe) = multiprocessing.Pipe()
@@ -64,18 +65,6 @@ class AudioAnalysisClient:
     def get_freq_midi(self):
         return self._call("get_freq_midi")
 
-    def stretch_and_shift(self, input_file, output_file, stretch_factor=1, n_steps=0):
-        offline_server = Server(audio='offline')
-        offline_server.boot()
-
-        input_table = SndTable(input_file)
-        pos = Phasor(freq=input_table.getRate() * (1 / stretch_factor), mul=input_table.getSize())
-        gran = Granulator(table=input_table, env=WinTable(7), pitch=1 + (n_steps / 12),
-                          pos=pos, grains=10, basedur=.1, mul=0.1).mix(2).out()
-
-        offline_server.recordOptions(dur=input_table.getDur() * stretch_factor, filename=output_file)
-        offline_server.start()
-
 
 class AudioAnalysisServer(multiprocessing.Process):
     def __init__(self, connection, duplex=True):
@@ -89,18 +78,18 @@ class AudioAnalysisServer(multiprocessing.Process):
         pa_list_devices()
 
         # Mac testing
-        self.server = Server()
-        # if self.duplex:
-        #     self.server = Server(sr=16000, ichnls=4)
-        #     self.server.setInOutDevice(2)
-        # else:
-        #     self.server = Server(sr=16000, duplex=0)
-        #     self.server.setOutputDevice(2)
+        # self.server = Server()
+        if self.duplex:
+            self.server = Server(sr=16000, ichnls=4)
+            self.server.setInOutDevice(2)
+        else:
+            self.server = Server(sr=16000, duplex=0)
+            self.server.setOutputDevice(2)
         self.server.deactivateMidi()
         self.server.boot().start()
 
         # If input, do some analysis
-        if duplex:
+        if self.duplex:
             in_0 = Input(chnl=0, mul=1)
             in_1 = Input(chnl=1, mul=1)
             in_mono = in_0 + in_1
