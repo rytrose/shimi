@@ -54,7 +54,7 @@ class AudioAnalysisServer(multiprocessing.Process):
         self.initialize_server()
 
         # If input, do some analysis
-        if self.duplex:
+        if self.duplex:  # WARNING, does not work with singing in parallel, TODO: try input in a new process
             in_0 = Input(chnl=0, mul=1)
             in_1 = Input(chnl=1, mul=1)
             in_mono = in_0 + in_1
