@@ -1,45 +1,14 @@
+import os, sys
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
+
 from pyo import *
+from audio.singing import Sample, Singing
 import multiprocessing
 import time
 import threading
 
 LEFT = 0
 RIGHT = 1
-
-
-class Sample:
-    def __init__(self, path, mul=1):
-        PVSIZE = 1024
-        PVOLAPS = 4
-
-        self.path = path
-        self.info = sndinfo(path)
-        self.NUM_FRAMES = self.info[0]
-        self.LENGTH = self.info[1]
-        self.SR = self.info[2]
-        self.snd_player = SfPlayer(self.path)
-
-        self.pv_analysis = PVAnal(self.snd_player, size=PVSIZE, overlaps=PVOLAPS)
-        self.speed_table = LinTable([(0, 1), (512, 1)], size=512)
-        self.speed_object = PVBufTabLoops(self.pv_analysis, self.speed_table, length=self.LENGTH)
-        self.trans_value = SigTo(1, time=0.005)
-        self.trans_object = PVTranspose(self.speed_object, transpo=self.trans_value)
-        self.adsr = Adsr(mul=mul)
-        self.pv_synth = PVSynth(self.trans_object, mul=self.adsr)
-
-    def play(self):
-        self.speed_object.reset()
-        self.pv_synth.out()
-        self.adsr.play()
-
-    def stop(self):
-        self.pv_synth.stop()
-
-    def set_transposition(self, val):
-        self.trans_value.setValue(val)
-
-    def set_speed(self, val):
-        self.speed_table.replace([(0, val), (512, val)])
 
 
 class AudioAnalysisClient:
@@ -65,28 +34,24 @@ class AudioAnalysisClient:
     def get_freq_midi(self):
         return self._call("get_freq_midi")
 
+    def sing_midi(self, midi_path):
+        return self._call("sing_midi", midi_path)
+
+    def sing_audio(self, audio_path, extraction_type):
+        return self._call("sing_audio", audio_path, extraction_type)
+
 
 class AudioAnalysisServer(multiprocessing.Process):
-    def __init__(self, connection, duplex=True):
+    def __init__(self, connection, duplex=False):
         super(AudioAnalysisServer, self).__init__()
-        self.daemon = True
+        self.daemon = False
         self._terminated = False
         self._connection = connection
         self.duplex = duplex
+        self.singing_object = None
 
     def run(self):
-        pa_list_devices()
-
-        # Mac testing
-        # self.server = Server()
-        if self.duplex:
-            self.server = Server(sr=16000, ichnls=4)
-            self.server.setInOutDevice(2)
-        else:
-            self.server = Server(sr=16000, duplex=0)
-            self.server.setOutputDevice(2)
-        self.server.deactivateMidi()
-        self.server.boot().start()
+        self.initialize_server()
 
         # If input, do some analysis
         if self.duplex:
@@ -111,12 +76,35 @@ class AudioAnalysisServer(multiprocessing.Process):
     def stop(self):
         self._terminated = True
 
+    def initialize_server(self):
+        pa_list_devices()
+
+        # Mac testing
+        # self.server = Server()
+        if self.duplex:
+            self.server = Server(sr=16000, ichnls=4)
+            self.server.setInOutDevice(2)
+        else:
+            self.server = Server(sr=16000, duplex=0)
+            self.server.setOutputDevice(2)
+        self.server.deactivateMidi()
+        self.server.boot().start()
+        self.singing_object = Singing()
+
     def get_freq(self, *args, **kwargs):
         return self.freq_hz.get()
 
     def get_freq_midi(self, *args, **kwargs):
         return self.freq_midi.get()
 
+    def sing_midi(self, *args, **kwargs):
+        midi_path = args[1]
+        self.singing_object.sing_midi(midi_path)
+
+    def sing_audio(self, *args, **kwargs):
+        audio_path = args[1]
+        extraction_type = args[2]
+        self.singing_object.sing_audio(audio_path, extraction_type)
 
 if __name__ == '__main__':
     a = AudioAnalysisClient()

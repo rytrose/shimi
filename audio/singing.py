@@ -1,8 +1,6 @@
 import os, sys
-
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
-from audio.audio_analysis import Sample
 import pretty_midi as pm
 import numpy as np
 import os.path as op
@@ -16,6 +14,41 @@ import time
 import random
 import glob
 import argparse
+
+
+class Sample:
+    def __init__(self, path, mul=1):
+        PVSIZE = 1024
+        PVOLAPS = 4
+
+        self.path = path
+        self.info = sndinfo(path)
+        self.NUM_FRAMES = self.info[0]
+        self.LENGTH = self.info[1]
+        self.SR = self.info[2]
+        self.snd_player = SfPlayer(self.path)
+
+        self.pv_analysis = PVAnal(self.snd_player, size=PVSIZE, overlaps=PVOLAPS)
+        self.speed_table = LinTable([(0, 1), (512, 1)], size=512)
+        self.speed_object = PVBufTabLoops(self.pv_analysis, self.speed_table, length=self.LENGTH)
+        self.trans_value = SigTo(1, time=0.005)
+        self.trans_object = PVTranspose(self.speed_object, transpo=self.trans_value)
+        self.adsr = Adsr(mul=mul)
+        self.pv_synth = PVSynth(self.trans_object, mul=self.adsr)
+
+    def play(self):
+        self.speed_object.reset()
+        self.pv_synth.out()
+        self.adsr.play()
+
+    def stop(self):
+        self.pv_synth.stop()
+
+    def set_transposition(self, val):
+        self.trans_value.setValue(val)
+
+    def set_speed(self, val):
+        self.speed_table.replace([(0, val), (512, val)])
 
 
 class MelodyExtraction:
@@ -184,13 +217,13 @@ class Singing:
             pa_list_devices()
 
             # Mac testing
-            self.server = Server()
-            # if self.duplex:
-            #     self.server = Server(sr=16000, ichnls=4)
-            #     self.server.setInOutDevice(2)
-            # else:
-            #     self.server = Server(sr=16000, duplex=0)
-            #     self.server.setOutputDevice(2)
+            # self.server = Server()
+            if self.duplex:
+                self.server = Server(sr=16000, ichnls=4)
+                self.server.setInOutDevice(2)
+            else:
+                self.server = Server(sr=16000, duplex=0)
+                self.server.setOutputDevice(2)
             self.server.deactivateMidi()
             self.server.boot().start()
 
