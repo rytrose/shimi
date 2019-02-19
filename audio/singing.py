@@ -75,45 +75,101 @@ class MelodyExtraction:
         self.melodia_timestamps = melodia_data["timestamps"]
         self.melodia_data, self.melodia_timestamps = self.process_data(self.melodia_data, self.melodia_timestamps)
 
-    def process_data(self, melody_data, timestamps):
-        np.place(melody_data, melody_data <= 0, 0)
-        data_without_zeros = []
-        timestamps_without_zeros = []
-
-        for freq, timestamp in zip(melody_data, timestamps):
-            if freq > 0:
-                data_without_zeros.append(freq)
-                timestamps_without_zeros.append(timestamp)
-
+    def process_data(self, melody_data, timestamps, fix_octaves=True, smooth_false_negatives=True,
+                     remove_false_positives=True):
         data_len = len(melody_data)
-        delta = self.tempo / 12
+        np.place(melody_data, melody_data <= 0, 0)  # Replace no VAD with 0
 
-        timestamps_to_interpolate = []
-        i = 0
-        j = 0
-        while melody_data[i] < 0:  # Move to first vocalization
-            i += 1
-            j += 1
+        if fix_octaves:
+            octave_look_back = self.tempo * 4  # look back a certain amount of time to judge octave
+            difference_tolerance = 2.2  # distance from running freq avg to consider octave error
+            start_idx = 0
+            end_idx = (np.abs(timestamps - octave_look_back)).argmin()
 
-        while i < data_len:
-            while i < data_len and melody_data[i] > 0:
-                i += 1
-                j += 1
-            # current frequency is 0
-            while j < data_len and melody_data[j] <= 0:
-                j += 1
-            # current frequency is not 0
-            if j < data_len:
-                if timestamps[j] - timestamps[i] < delta:
-                    for t in range(i, j):
-                        timestamps_to_interpolate.append(timestamps[t])
-            i = j
+            num_octaves_dropped = 0
+            num_octaves_raised = 0
 
-        print("Interpolating %d points." % len(timestamps_to_interpolate))
+            while end_idx < data_len:
+                buffer_average_freq = np.average(np.where(melody_data[start_idx:end_idx] > 0))
+                octave_ratio = melody_data[end_idx] / buffer_average_freq
 
-        interpolated_values = np.interp(timestamps_to_interpolate, timestamps_without_zeros, data_without_zeros)
-        for i, val in enumerate(interpolated_values):
-            melody_data[np.where(timestamps == timestamps_to_interpolate[i])[0]] = val
+                if octave_ratio > 0:
+                    if octave_ratio > difference_tolerance:  # drop octaves too high
+                        while octave_ratio > difference_tolerance:
+                            octave_ratio = octave_ratio / 2
+                            melody_data[end_idx] = melody_data[end_idx] / 2
+                        num_octaves_dropped += 1
+                    elif octave_ratio < (1 / difference_tolerance):  # boost octaves too low
+                        while octave_ratio < (1 / difference_tolerance):
+                            octave_ratio = octave_ratio * 2
+                            melody_data[end_idx] = melody_data[end_idx] * 2
+                        num_octaves_raised += 1
+
+                start_idx += 1
+                end_idx += 1
+
+            print("Dropped %d notes an octave." % num_octaves_dropped)
+            print("Raised %d notes an octave." % num_octaves_raised)
+
+        if smooth_false_negatives:
+            data_without_zeros = []  # get all the non-zero values to use for interpolation later
+            timestamps_without_zeros = []
+
+            for freq, timestamp in zip(melody_data, timestamps):
+                if freq > 0:
+                    data_without_zeros.append(freq)
+                    timestamps_without_zeros.append(timestamp)
+            vad_smoothing_delta = self.tempo / 12
+
+            timestamps_to_interpolate = []
+            num_false_negatives = 0
+            start_idx = 0
+            end_idx = 0
+            while melody_data[start_idx] < 0:  # move to first vocalization
+                start_idx += 1
+                end_idx += 1
+            while start_idx < data_len:  # look for gaps in VAD that seem to be false negatives
+                while start_idx < data_len and melody_data[start_idx] > 0:
+                    start_idx += 1
+                    end_idx += 1
+                while end_idx < data_len and melody_data[end_idx] <= 0:  # current frequency is 0
+                    end_idx += 1
+                if end_idx < data_len:  # current frequency is not 0
+                    if timestamps[end_idx] - timestamps[start_idx] < vad_smoothing_delta:
+                        num_false_negatives += 1
+                        for t in range(start_idx, end_idx):
+                            timestamps_to_interpolate.append(timestamps[t])
+                start_idx = end_idx
+
+            print("Filled in %d false negatives." % num_false_negatives)
+            print("Interpolating %d points." % len(timestamps_to_interpolate))
+
+            interpolated_values = np.interp(timestamps_to_interpolate, timestamps_without_zeros, data_without_zeros)
+            for start_idx, val in enumerate(interpolated_values):
+                melody_data[np.where(timestamps == timestamps_to_interpolate[start_idx])[0]] = val
+
+        if remove_false_positives:
+            num_false_positives = 0
+            points_removed = 0
+            false_positves_delta = self.tempo / 10
+            start_idx = 0
+            end_idx = 0
+            while start_idx < data_len:  # look for short detections that seem to be false positives
+                while start_idx < data_len and melody_data[start_idx] <= 0:
+                    start_idx += 1
+                    end_idx += 1
+                while end_idx < data_len and melody_data[end_idx] > 0:
+                    end_idx += 1
+                if end_idx < data_len:
+                    if timestamps[end_idx] - timestamps[start_idx] < false_positves_delta:
+                        num_false_positives += 1
+                        for t in range(start_idx, end_idx):
+                            melody_data[t] = 0
+                            points_removed += 1
+                start_idx = end_idx
+
+            print("Removed %d false positives." % num_false_positives)
+            print("Zeroed %d points." % points_removed)
 
         return melody_data, timestamps
 
