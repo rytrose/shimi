@@ -35,6 +35,10 @@ def quantize(num, quant):
     return quant[ind]
 
 
+def get_bit(byte_val, i):
+    return (byte_val & (1 << i)) != 0
+
+
 # A class to abstract a point from PoseNet
 class Point:
     def __init__(self, x, y, score=None):

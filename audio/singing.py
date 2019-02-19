@@ -2,6 +2,8 @@ import os, sys
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
+from utils.utils import get_bit
+import matplotlib.pyplot as plt
 import pretty_midi as pm
 import numpy as np
 import os.path as op
@@ -71,7 +73,7 @@ class MelodyExtraction:
         self.melodia_data = None
         self.melodia_timestamps = None
 
-    def deep_learning_extraction(self):
+    def deep_learning_extraction(self, process=True):
         if not op.exists(op.join("cnn_outputs", "cnn_" + self.name + ".txt")):
             command_string = "python3.5 " + op.join(self.deep_learning_path,
                                                     "VocalMelodyExtraction.py") + " --input_file " + self.abs_path + \
@@ -94,10 +96,11 @@ class MelodyExtraction:
         np.place(self.deep_learning_data, self.deep_learning_data <= 0, 0)
         num_points = self.deep_learning_data.shape[0]
         self.deep_learning_timestamps = [(i / num_points) * self.length_seconds for i in range(num_points)]
-        self.deep_learning_data, self.deep_learning_timestamps = self.process_data(self.deep_learning_data,
-                                                                                   self.deep_learning_timestamps)
+        if process:
+            self.deep_learning_data, self.deep_learning_timestamps = self.process_data(self.deep_learning_data,
+                                                                                       self.deep_learning_timestamps)
 
-    def melodia_extraction(self):
+    def melodia_extraction(self, process=True):
         if not op.exists(op.join("melodia_outputs", "melodia_" + self.name + ".p")):
             command_string = "exagear -- " + op.join(self.run_melodia_path,
                                                      "run_melodia.sh") + " " + self.abs_path + " " + self.name
@@ -107,37 +110,41 @@ class MelodyExtraction:
         melodia_data = pickle.load(open(op.join("melodia_outputs", "melodia_" + self.name + ".p"), "rb"))
         self.melodia_data = melodia_data["frequencies"]
         self.melodia_timestamps = melodia_data["timestamps"]
-        self.melodia_data, self.melodia_timestamps = self.process_data(self.melodia_data, self.melodia_timestamps)
+
+        if process:
+            self.melodia_data, self.melodia_timestamps = self.process_data(self.melodia_data, self.melodia_timestamps)
 
     def process_data(self, melody_data, timestamps, fix_octaves=True, smooth_false_negatives=True,
                      remove_false_positives=True):
         data_len = len(melody_data)
+        timestep = timestamps[1] - timestamps[0]
         np.place(melody_data, melody_data <= 0, 0)  # Replace no VAD with 0
 
         if fix_octaves:
-            octave_look_back = self.tempo * 4  # look back a certain amount of time to judge octave
+            octave_look_back = timestep * 200  # look back a certain amount of time to judge octave
             difference_tolerance = 2.2  # distance from running freq avg to consider octave error
             start_idx = 0
-            end_idx = (np.abs(timestamps - octave_look_back)).argmin()
+            end_idx = (np.abs(np.array(timestamps) - octave_look_back)).argmin()
 
             num_octaves_dropped = 0
             num_octaves_raised = 0
 
             while end_idx < data_len:
-                buffer_average_freq = np.average(np.where(melody_data[start_idx:end_idx] > 0))
-                octave_ratio = melody_data[end_idx] / buffer_average_freq
+                buffer_average_freq = np.average(melody_data[np.where(melody_data[start_idx:end_idx] > 0)])
+                if buffer_average_freq > 0:
+                    octave_ratio = melody_data[end_idx] / buffer_average_freq
 
-                if octave_ratio > 0:
-                    if octave_ratio > difference_tolerance:  # drop octaves too high
-                        while octave_ratio > difference_tolerance:
-                            octave_ratio = octave_ratio / 2
-                            melody_data[end_idx] = melody_data[end_idx] / 2
-                        num_octaves_dropped += 1
-                    elif octave_ratio < (1 / difference_tolerance):  # boost octaves too low
-                        while octave_ratio < (1 / difference_tolerance):
-                            octave_ratio = octave_ratio * 2
-                            melody_data[end_idx] = melody_data[end_idx] * 2
-                        num_octaves_raised += 1
+                    if octave_ratio > 0:
+                        if octave_ratio > difference_tolerance:  # drop octaves too high
+                            while octave_ratio > difference_tolerance:
+                                octave_ratio = octave_ratio / 2
+                                melody_data[end_idx] = melody_data[end_idx] / 2
+                            num_octaves_dropped += 1
+                        elif octave_ratio < (1 / difference_tolerance):  # boost octaves too low
+                            while octave_ratio < (1 / difference_tolerance):
+                                octave_ratio = octave_ratio * 2
+                                melody_data[end_idx] = melody_data[end_idx] * 2
+                            num_octaves_raised += 1
 
                 start_idx += 1
                 end_idx += 1
@@ -153,9 +160,10 @@ class MelodyExtraction:
                 if freq > 0:
                     data_without_zeros.append(freq)
                     timestamps_without_zeros.append(timestamp)
-            vad_smoothing_delta = self.tempo / 12
+            vad_smoothing_delta = 2 * timestep
 
             timestamps_to_interpolate = []
+            indicies_to_interpolate = []
             num_false_negatives = 0
             start_idx = 0
             end_idx = 0
@@ -173,19 +181,21 @@ class MelodyExtraction:
                         num_false_negatives += 1
                         for t in range(start_idx, end_idx):
                             timestamps_to_interpolate.append(timestamps[t])
+                            indicies_to_interpolate.append(t)
                 start_idx = end_idx
 
             print("Filled in %d false negatives." % num_false_negatives)
             print("Interpolating %d points." % len(timestamps_to_interpolate))
 
             interpolated_values = np.interp(timestamps_to_interpolate, timestamps_without_zeros, data_without_zeros)
-            for start_idx, val in enumerate(interpolated_values):
-                melody_data[np.where(timestamps == timestamps_to_interpolate[start_idx])[0]] = val
+            for ind, val in zip(indicies_to_interpolate, interpolated_values):
+                melody_data[ind] = val
 
         if remove_false_positives:
             num_false_positives = 0
             points_removed = 0
-            false_positves_delta = self.tempo / 10
+
+            false_positves_delta = 3 * timestep
             start_idx = 0
             end_idx = 0
             while start_idx < data_len:  # look for short detections that seem to be false positives
@@ -207,6 +217,55 @@ class MelodyExtraction:
 
         return melody_data, timestamps
 
+    def process_comparison(self, extraction_type):
+        if extraction_type == "melodia":
+            self.melodia_extraction(process=False)
+            data = self.melodia_data
+            np.place(data, data <= 0, 0)
+            timestamps = self.melodia_timestamps
+        else:
+            self.deep_learning_extraction(process=False)
+            data = self.deep_learning_data
+            timestamps = self.deep_learning_timestamps
+
+        for i in range(1, 8):
+            label = ""
+            fix_octaves = get_bit(i, 0)
+            smooth_false_negatives = get_bit(i, 1)
+            remove_false_positives = get_bit(i, 2)
+
+            if fix_octaves:
+                label += "Fixed Octaves, "
+            if smooth_false_negatives:
+                label += "Smoothed False Negatives, "
+            if remove_false_positives:
+                label += "Removed False Positives, "
+
+            label = label.rstrip(", ")
+
+            print("--")
+            processed_data, processed_timestamps = self.process_data(copy.deepcopy(data), copy.deepcopy(timestamps),
+                                                                     fix_octaves=fix_octaves,
+                                                                     smooth_false_negatives=smooth_false_negatives,
+                                                                     remove_false_positives=remove_false_positives)
+
+            colors = np.repeat("blue", len(timestamps))
+            colors[np.argwhere(data != processed_data)] = "red"
+
+            print("Num different points: ", np.argwhere(data != processed_data).shape[0])
+
+            fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, sharey=True)
+            fig.suptitle("%s (%s): Original vs. %s" % (self.name, extraction_type, label))
+            fig.set_size_inches(18.5, 10.5)
+
+            ax1.scatter(timestamps, data, s=1, color=colors)
+            ax2.scatter(processed_timestamps, processed_data, s=1, color=colors)
+
+            fig.subplots_adjust(hspace=0)
+            plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
+            fig.savefig(op.join("plots", "%s_%s_%d_%d_%d.png" % (
+                extraction_type, self.name, fix_octaves, smooth_false_negatives, remove_false_positives)), dpi=250)
+
 
 class Singing:
     def __init__(self, init_pyo=False, duplex=False):
@@ -218,13 +277,13 @@ class Singing:
             pa_list_devices()
 
             # Mac testing
-            # self.server = Server()
-            if self.duplex:
-                self.server = Server(sr=16000, ichnls=4)
-                self.server.setInOutDevice(2)
-            else:
-                self.server = Server(sr=16000, duplex=0)
-                self.server.setOutputDevice(2)
+            self.server = Server()
+            # if self.duplex:
+            #     self.server = Server(sr=16000, ichnls=4)
+            #     self.server.setInOutDevice(2)
+            # else:
+            #     self.server = Server(sr=16000, duplex=0)
+            #     self.server.setOutputDevice(2)
             self.server.deactivateMidi()
             self.server.boot().start()
 
