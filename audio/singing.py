@@ -56,6 +56,7 @@ class Sample:
 
 class MelodyExtraction:
     def __init__(self, path):
+        self.resource_path = "/home/nvidia/shimi/audio"
         self.path = path
         self.sound_data, self.sr = sf.read(self.path, always_2d=True)
         self.tempo = estimate_tempo(self.sound_data[:, 1], self.sr)[0] / 60
@@ -69,15 +70,17 @@ class MelodyExtraction:
         self.deep_learning_data = None
         self.deep_learning_timestamps = None
 
-        self.run_melodia_path = "/home/nvidia/shimi/audio"
+        self.run_melodia_path = self.resource_path
         self.melodia_data = None
         self.melodia_timestamps = None
 
     def deep_learning_extraction(self, process=True):
-        if not op.exists(op.join("cnn_outputs", "cnn_" + self.name + ".txt")):
+        if not op.exists(op.join(self.resource_path, "cnn_outputs", "cnn_" + self.name + ".txt")):
             command_string = "python3.5 " + op.join(self.deep_learning_path,
                                                     "VocalMelodyExtraction.py") + " --input_file " + self.abs_path + \
-                             " -m " + self.deep_learning_model_path + " --output_file " + "cnn_" + self.name
+                             " -m " + self.deep_learning_model_path + " --output_file " + op.join(self.resource_path,
+                                                                                                  "cnn_outputs",
+                                                                                                  "cnn_") + self.name
 
             process = Popen(command_string.split(' '), stdout=PIPE, bufsize=1, universal_newlines=True)
 
@@ -87,11 +90,7 @@ class MelodyExtraction:
                     print("Deep learning melody extraction complete.")
                     break
 
-            mv_command_string = "mv cnn_" + self.name + ".txt cnn_outputs/"
-            Popen(mv_command_string.split(' '))
-            time.sleep(0.1)
-
-        deep_learning_data = np.loadtxt(op.join("cnn_outputs", "cnn_" + self.name + ".txt"))
+        deep_learning_data = np.loadtxt(op.join(self.resource_path, "cnn_outputs", "cnn_" + self.name + ".txt"))
         self.deep_learning_data = deep_learning_data[:, 1]
         np.place(self.deep_learning_data, self.deep_learning_data <= 0, 0)
         num_points = self.deep_learning_data.shape[0]
@@ -107,7 +106,8 @@ class MelodyExtraction:
 
             input("Please run the following in a new shell, and press enter when it is done:\n%s\n" % command_string)
 
-        melodia_data = pickle.load(open(op.join("melodia_outputs", "melodia_" + self.name + ".p"), "rb"))
+        melodia_data = pickle.load(
+            open(op.join(self.resource_path, "melodia_outputs", "melodia_" + self.name + ".p"), "rb"))
         self.melodia_data = melodia_data["frequencies"]
         self.melodia_timestamps = melodia_data["timestamps"]
 
@@ -216,7 +216,7 @@ class MelodyExtraction:
                             melody_data[i] = 0
                     else:
                         prev_spike_check = (melody_data[i] / melody_data[i - 1]) > spike_tolerance or (
-                                    melody_data[i] / melody_data[i - 1]) < (1 / spike_tolerance)
+                                melody_data[i] / melody_data[i - 1]) < (1 / spike_tolerance)
                         forward_spike_check = (melody_data[i] / melody_data[i + 1]) > spike_tolerance or (
                                 melody_data[i] / melody_data[i + 1]) < (1 / spike_tolerance)
 
@@ -322,7 +322,8 @@ class MelodyExtraction:
             fig.subplots_adjust(hspace=0)
             plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
             fig.savefig(op.join("plots", "%s_%s_%d_%d_%d_%d.png" % (
-                extraction_type, self.name, fix_octaves, smooth_false_negatives, remove_false_positives, remove_spikes)), dpi=250)
+                extraction_type, self.name, fix_octaves, smooth_false_negatives, remove_false_positives,
+                remove_spikes)), dpi=250)
 
 
 class Singing:
