@@ -3,6 +3,8 @@ import os, sys
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from utils.utils import get_bit
+import matplotlib
+matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import pretty_midi as pm
 import numpy as np
@@ -330,9 +332,10 @@ class MelodyExtraction:
 
 
 class Singing:
-    def __init__(self, init_pyo=False, duplex=False):
+    def __init__(self, init_pyo=False, duplex=False, resource_path="/home/nvidia/shimi/audio"):
         self.duplex = duplex
         self.vocal_paths = glob.glob(op.join("audio_files", "shimi_vocalizations", "*"))
+        self.resource_path = resource_path
 
         if init_pyo:
             self.server = Server()
@@ -354,10 +357,10 @@ class Singing:
         self.song_length_in_samples, self.song_length_in_seconds, self.song_sr, _, _, _ = sndinfo(self.path)
         self.song_length_in_samples = int(self.song_length_in_samples)
         self.song_sr = int(self.song_sr)
-        self.song_sample = SfPlayer(self.path, mul=0.2)
+        self.song_sample = SfPlayer(self.path, mul=0.1)
         self.shimi_audio_samples = []
 
-        self.melody_extraction = MelodyExtraction(self.path)
+        self.melody_extraction = MelodyExtraction(self.path, resource_path=self.resource_path)
         if extraction_type == "melodia":
             self.melody_extraction.melodia_extraction()
             self.melody_data = self.melody_extraction.melodia_data
@@ -482,5 +485,6 @@ class Singing:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--pyo", action="store_true", default=False)
+    parser.add_argument("-r", "--resource_path", type=str, default=os.getcwd())
     args = parser.parse_args()
-    s = Singing(init_pyo=args.pyo)
+    s = Singing(init_pyo=args.pyo, resource_path=args.resource_path)

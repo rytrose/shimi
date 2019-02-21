@@ -122,12 +122,14 @@ class LakhMidiAnalysis:
 
             print("Num different points: ", np.argwhere(extracted_melody_data != midi_melody_data).shape[0])
 
-            fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, sharey=True)
+            fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, sharex=True, sharey=True)
             fig.suptitle("[%s by %s] Audio Extracted vs. MIDI" % (title, artist))
             fig.set_size_inches(18.5, 10.5)
 
             ax1.scatter(timestamps, extracted_melody_data, s=1, color=colors)
             ax2.scatter(timestamps, midi_melody_data, s=1, color=colors)
+            ax3.scatter(timestamps, extracted_melody_data, s=1)
+            ax3.scatter(timestamps, midi_melody_data, s=1)
 
             fig.subplots_adjust(hspace=0)
             plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
