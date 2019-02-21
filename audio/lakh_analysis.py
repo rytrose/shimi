@@ -2,6 +2,8 @@ import os, sys
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
+import matplotlib
+matplotlib.use("TkAgg")
 from audio.singing import MelodyExtraction
 import matplotlib.pyplot as plt
 import pretty_midi as pm
@@ -61,11 +63,11 @@ class LakhMidiAnalysis:
                 conversion.wait()
                 os.remove(mp3_path)
 
-            melody_extractor = MelodyExtraction(wav_path)
+            melody_extractor = MelodyExtraction(wav_path, resource_path=os.getcwd())
 
             send_file_command = 'scp %s nvidia@weinberg-jetson-1.music.gatech.edu:~/shimi/audio/audio_files/%s' % (
                 wav_path, wav_filename)
-            shimi_command = '/home/nvidia/shimi/audio/run_melody_extraction.py -i /home/nvidia/shimi/audio/audio_files/%s' % wav_filename
+            shimi_command = 'python /home/nvidia/shimi/audio/run_melody_extraction.py -i /home/nvidia/shimi/audio/audio_files/%s' % wav_filename
             receive_files_command = r'scp nvidia@weinberg-jetson-1.music.gatech.edu:~/shimi/audio/\{cnn_outputs/cnn_%s.txt,melodia_outputs/melodia_%s.p\} ./' \
                                     % (msd_id, msd_id)
 
@@ -94,6 +96,8 @@ class LakhMidiAnalysis:
                     best_score = score
                     best_midi_md5 = midi_md5
 
+            print("Using file %s.mid [score: %f]" % (best_midi_md5, best_score))
+
             midi_object = pm.PrettyMIDI(self.get_midi_path(msd_id, best_midi_md5))
 
             print("MIDI File Voices:")
@@ -103,9 +107,15 @@ class LakhMidiAnalysis:
             voice_idx = input("Please select a voice to use: ")
             voice_idx = int(voice_idx)
 
-            piano_roll = midi_object.instruments[voice_idx].get_piano_roll(times=timestamps)
-            midi_melody_data = np.array(
-                [pm.note_number_to_hz(note.index(1)) if sum(note) > 0 else 0 for note in piano_roll])
+            piano_roll = midi_object.instruments[voice_idx].get_piano_roll(times=np.array(timestamps))
+            midi_melody_data = []
+            for i in range(piano_roll.shape[1]):
+                note_vector = piano_roll[:,i]
+                note_indices = np.argwhere(note_vector > 0.0)
+                if len(note_indices) > 0:
+                    midi_melody_data.append(pm.note_number_to_hz(note_indices[0]))
+                else:
+                    midi_melody_data.append(0)
 
             colors = np.repeat("blue", len(timestamps))
             colors[np.argwhere(extracted_melody_data != midi_melody_data)] = "red"

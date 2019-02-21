@@ -11,5 +11,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     m = MelodyExtraction(args.input_path)
-    m.deep_learning_extraction()
-    m.melodia_extraction()
+    m.deep_learning_extraction(process=False)
+    m.melodia_extraction(process=False)

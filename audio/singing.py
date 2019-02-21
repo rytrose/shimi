@@ -55,8 +55,8 @@ class Sample:
 
 
 class MelodyExtraction:
-    def __init__(self, path):
-        self.resource_path = "/home/nvidia/shimi/audio"
+    def __init__(self, path, resource_path="/home/nvidia/shimi/audio"):
+        self.resource_path = resource_path
         self.path = path
         self.sound_data, self.sr = sf.read(self.path, always_2d=True)
         self.tempo = estimate_tempo(self.sound_data[:, 1], self.sr)[0] / 60
@@ -222,8 +222,11 @@ class MelodyExtraction:
 
                         if prev_spike_check and forward_spike_check:
                             num_spikes += 1
-                            timestamps_without_zeros.pop(timestamps_without_zeros.index(timestamps[i]))
-                            data_without_zeros.pop(data_without_zeros.index(melody_data[i]))
+                            try:
+                                timestamps_without_zeros.pop(timestamps_without_zeros.index(timestamps[i]))
+                                data_without_zeros.pop(data_without_zeros.index(melody_data[i]))
+                            except:
+                                print("Unable to pop spike at timestep %f." % timestamps[i])
                             timestamps_to_interpolate.append(timestamps[i])
                             indicies_to_interpolate.append(i)
                 start_idx = end_idx
