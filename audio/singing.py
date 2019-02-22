@@ -4,6 +4,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from utils.utils import get_bit
 import matplotlib
+
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import pretty_midi as pm
@@ -22,7 +23,7 @@ import argparse
 
 
 class Sample:
-    def __init__(self, path, mul=1):
+    def __init__(self, path, mul=1, balance=None):
         PVSIZE = 1024
         PVOLAPS = 4
 
@@ -38,16 +39,21 @@ class Sample:
         self.speed_object = PVBufTabLoops(self.pv_analysis, self.speed_table, length=self.LENGTH)
         self.trans_value = SigTo(1, time=0.005)
         self.trans_object = PVTranspose(self.speed_object, transpo=self.trans_value)
-        self.adsr = Adsr(mul=mul)
+        self.adsr = Adsr(attack=0.02, mul=mul)
         self.pv_synth = PVSynth(self.trans_object, mul=self.adsr)
+        if balance is None:
+            self.output = self.pv_synth
+        else:
+            self.output = Balance(self.pv_synth, balance, mul=self.adsr)
 
     def play(self):
         self.speed_object.reset()
-        self.pv_synth.out()
         self.adsr.play()
+        self.output.out()
 
     def stop(self):
-        self.pv_synth.stop()
+        self.adsr.stop()
+        # self.output.stop()
 
     def set_transposition(self, val):
         self.trans_value.setValue(val)
@@ -82,7 +88,8 @@ class MelodyExtraction:
                                                     "VocalMelodyExtraction.py") + " --input_file " + self.abs_path + \
                              " -m " + self.deep_learning_model_path + " --output_file " + op.join(self.resource_path,
                                                                                                   "cnn_outputs",
-                                                                                                  "cnn_") + self.name
+                                                                                                  "cnn_") + self.name \
+                                                                                                  + " --jetson"
 
             process = Popen(command_string.split(' '), stdout=PIPE, bufsize=1, universal_newlines=True)
 
@@ -357,7 +364,9 @@ class Singing:
         self.song_length_in_samples, self.song_length_in_seconds, self.song_sr, _, _, _ = sndinfo(self.path)
         self.song_length_in_samples = int(self.song_length_in_samples)
         self.song_sr = int(self.song_sr)
-        self.song_sample = SfPlayer(self.path, mul=0.1)
+        self.song_vol = 0.4
+        self.song_sample = SfPlayer(self.path, mul=self.song_vol)
+        self.vocal_filter = Biquadx(self.song_sample * (1 / self.song_vol), freq=800, q=0.75)
         self.shimi_audio_samples = []
 
         self.melody_extraction = MelodyExtraction(self.path, resource_path=self.resource_path)
@@ -373,7 +382,7 @@ class Singing:
         self.length_seconds = self.melody_extraction.length_seconds
 
         for path in self.vocal_paths:
-            shimi_sample = Sample(path)
+            shimi_sample = Sample(path, balance=self.vocal_filter)
             self.shimi_audio_samples.append(shimi_sample)
 
         self.shimi_sample = random.choice(self.shimi_audio_samples)
