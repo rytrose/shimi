@@ -89,6 +89,10 @@ class EmotionTrustExperiment:
         stimulus = None
 
         while stimulus is None:
+            if not self.trials:
+                self.complete()
+                return
+
             trial_type = random.choice(self.trials)
             if trial_type == "audio_only":
                 with_audio = True
@@ -186,8 +190,10 @@ class EmotionTrustExperiment:
     def complete(self):
         self.osc_client.send_message("/complete", [])
         output_name = op.join("results", time.strftime("%m%d%y_%H%M%S.p"))
-        pickle.dump(open(output_name, "wb"), self.results)
-        print("Completed!")
+        pickle.dump(self.results, open(output_name, "wb"))
+        print("Completed trials, opening survey.")
+        command_string = "chromium-browser https://gatech.co1.qualtrics.com/jfe/form/SV_b288WeOXsbcKAYZ"
+        self.browser = Popen(command_string.split(' '))
 
     def wait_for_playback(self):
         while mixer.music.get_busy():
