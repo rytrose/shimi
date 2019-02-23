@@ -89,7 +89,7 @@ class MelodyExtraction:
                              " -m " + self.deep_learning_model_path + " --output_file " + op.join(self.resource_path,
                                                                                                   "cnn_outputs",
                                                                                                   "cnn_") + self.name \
-                                                                                                  + " --jetson"
+                             + " --jetson"
 
             process = Popen(command_string.split(' '), stdout=PIPE, bufsize=1, universal_newlines=True)
 
@@ -123,7 +123,7 @@ class MelodyExtraction:
         if process:
             self.melodia_data, self.melodia_timestamps = self.process_data(self.melodia_data, self.melodia_timestamps)
 
-    def process_data(self, melody_data, timestamps, fix_octaves=False, smooth_false_negatives=True,
+    def process_data(self, melody_data, timestamps, fix_octaves=True, smooth_false_negatives=True,
                      remove_false_positives=True, remove_spikes=True):
         data_len = len(melody_data)
         timestep = timestamps[1] - timestamps[0]
@@ -247,36 +247,99 @@ class MelodyExtraction:
             print("Removed %d spikes." % num_spikes)
 
         if fix_octaves:
-            octave_look_back = self.tempo * 4  # look back a certain amount of time to judge octave
-            difference_tolerance = 2.2  # distance from running freq avg to consider octave error
+            notes = []
             start_idx = 0
-            end_idx = (np.abs(np.array(timestamps) - octave_look_back)).argmin()
+            end_idx = 0
 
-            num_octaves_dropped = 0
-            num_octaves_raised = 0
+            while end_idx < data_len:  # create notes for reference
+                while start_idx < data_len and melody_data[start_idx] <= 0:
+                    start_idx += 1
+                    end_idx += 1
+                while end_idx < data_len and melody_data[end_idx] > 0:
+                    end_idx += 1
+                if start_idx < end_idx:
+                    new_note = {
+                        'start': start_idx,
+                        'end': end_idx,
+                        'avg': np.average(melody_data[start_idx:end_idx])
+                    }
+                    notes.append(new_note)
+                start_idx = end_idx
 
-            while end_idx < data_len:
-                buffer_average_freq = np.average(melody_data[np.where(melody_data[start_idx:end_idx] > 0)])
-                if buffer_average_freq > 0:
-                    octave_ratio = melody_data[end_idx] / buffer_average_freq
+            inter_note_look_dist = 10
+            inter_note_tolerance = 1.5
+            intra_note_look_dist = 4
+            intra_note_tolerance = 2.2
 
-                    if octave_ratio > 0:
-                        if octave_ratio > difference_tolerance:  # drop octaves too high
-                            while octave_ratio > difference_tolerance:
-                                octave_ratio = octave_ratio / 2
-                                melody_data[end_idx] = melody_data[end_idx] / 2
-                            num_octaves_dropped += 1
-                        elif octave_ratio < (1 / difference_tolerance):  # boost octaves too low
-                            while octave_ratio < (1 / difference_tolerance):
-                                octave_ratio = octave_ratio * 2
-                                melody_data[end_idx] = melody_data[end_idx] * 2
-                            num_octaves_raised += 1
+            points_dropped = 0
+            points_raised = 0
+            notes_dropped = 0
+            notes_raised = 0
 
-                start_idx += 1
-                end_idx += 1
+            for note in notes:  # do inter-note fixing first
+                note_start = note['start']
+                note_end = note['end']
+                for i in range(note_start, note_end):
+                    back_avg = np.average(melody_data[max(note_start, i - inter_note_look_dist):i])
+                    forward_avg = np.average(melody_data[i:min(note_end, i + inter_note_look_dist)])
+                    surrounding_avg = (back_avg + forward_avg) * 0.5
 
-            print("Dropped %d notes an octave." % num_octaves_dropped)
-            print("Raised %d notes an octave." % num_octaves_raised)
+                    if surrounding_avg == 0:
+                        continue
+
+                    octave_ratio = melody_data[i] / surrounding_avg
+
+                    if octave_ratio > inter_note_tolerance:
+                        while octave_ratio > inter_note_tolerance:
+                            octave_ratio = octave_ratio / 2
+                            melody_data[i] = melody_data[i] / 2
+                        points_dropped += 1
+                    elif octave_ratio < (1 / inter_note_tolerance):
+                        while octave_ratio < (1 / inter_note_tolerance):
+                            octave_ratio = octave_ratio * 2
+                            melody_data[i] = melody_data[i] * 2
+                        points_raised += 1
+
+            for note_i, note in enumerate(notes):
+                note_start = note['start']
+                note_end = note['end']
+
+                prev_avg = 0
+                num_prev = 0
+                for prev_note_i in range(max(0, note_i - intra_note_look_dist), note_i):
+                    prev_note = notes[prev_note_i]
+                    prev_note_start = prev_note['start']
+                    prev_note_end = prev_note['end']
+                    prev_avg += np.average(melody_data[prev_note_start:prev_note_end])
+                    num_prev += 1
+
+                if prev_avg == 0:
+                    continue
+
+                prev_avg = prev_avg / num_prev
+
+                note_avg = np.average(melody_data[note_start:note_end])
+                octave_ratio = note_avg / prev_avg
+
+                if octave_ratio > intra_note_tolerance:
+                    octave_closeness = abs(octave_ratio - 1)
+                    while abs((octave_ratio / 2) - 1) < octave_closeness:
+                    # while octave_ratio > intra_note_tolerance:
+                        octave_ratio = octave_ratio / 2
+                        melody_data[note_start:note_end] = melody_data[note_start:note_end] / 2
+                    notes_dropped += 1
+                elif octave_ratio < (1 / intra_note_tolerance):
+                    octave_closeness = abs(octave_ratio - 1)
+                    while abs((octave_ratio * 2) - 1) < octave_closeness:
+                    # while octave_ratio < (1 / intra_note_tolerance):
+                        octave_ratio = octave_ratio * 2
+                        melody_data[note_start:note_end] = melody_data[note_start:note_end] * 2
+                    notes_raised += 1
+
+            print("Dropped %d points an octave." % points_dropped)
+            print("Raised %d points an octave." % points_raised)
+            print("Dropped %d notes an octave." % notes_dropped)
+            print("Raised %d notes an octave." % notes_raised)
 
         return melody_data, timestamps
 
