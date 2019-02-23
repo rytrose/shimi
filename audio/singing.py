@@ -105,8 +105,9 @@ class MelodyExtraction:
         num_points = self.deep_learning_data.shape[0]
         self.deep_learning_timestamps = [(i / num_points) * self.length_seconds for i in range(num_points)]
         if process:
-            self.deep_learning_data, self.deep_learning_timestamps = self.process_data(self.deep_learning_data,
-                                                                                       self.deep_learning_timestamps)
+            self.deep_learning_data, self.deep_learning_timestamps, self.notes = self.process_data(
+                self.deep_learning_data,
+                self.deep_learning_timestamps)
 
     def melodia_extraction(self, process=True):
         if not op.exists(op.join("melodia_outputs", "melodia_" + self.name + ".p")):
@@ -121,7 +122,8 @@ class MelodyExtraction:
         self.melodia_timestamps = melodia_data["timestamps"]
 
         if process:
-            self.melodia_data, self.melodia_timestamps = self.process_data(self.melodia_data, self.melodia_timestamps)
+            self.melodia_data, self.melodia_timestamps, self.notes = self.process_data(self.melodia_data,
+                                                                                       self.melodia_timestamps)
 
     def process_data(self, melody_data, timestamps, fix_octaves=True, smooth_false_negatives=True,
                      remove_false_positives=True, remove_spikes=True):
@@ -175,7 +177,7 @@ class MelodyExtraction:
             num_false_positives = 0
             points_removed = 0
 
-            false_positves_delta = 3 * timestep
+            false_positves_delta = 4 * timestep
             start_idx = 0
             end_idx = 0
             while start_idx < data_len:  # look for short detections that seem to be false positives
@@ -324,14 +326,14 @@ class MelodyExtraction:
                 if octave_ratio > intra_note_tolerance:
                     octave_closeness = abs(octave_ratio - 1)
                     while abs((octave_ratio / 2) - 1) < octave_closeness:
-                    # while octave_ratio > intra_note_tolerance:
+                        octave_closeness = abs((octave_ratio / 2) - 1)
                         octave_ratio = octave_ratio / 2
                         melody_data[note_start:note_end] = melody_data[note_start:note_end] / 2
                     notes_dropped += 1
                 elif octave_ratio < (1 / intra_note_tolerance):
                     octave_closeness = abs(octave_ratio - 1)
                     while abs((octave_ratio * 2) - 1) < octave_closeness:
-                    # while octave_ratio < (1 / intra_note_tolerance):
+                        octave_closeness = abs((octave_ratio * 2) - 1)
                         octave_ratio = octave_ratio * 2
                         melody_data[note_start:note_end] = melody_data[note_start:note_end] * 2
                     notes_raised += 1
@@ -341,7 +343,26 @@ class MelodyExtraction:
             print("Dropped %d notes an octave." % notes_dropped)
             print("Raised %d notes an octave." % notes_raised)
 
-        return melody_data, timestamps
+        notes = []
+        start_idx = 0
+        end_idx = 0
+
+        while end_idx < data_len:  # create notes for reference
+            while start_idx < data_len and melody_data[start_idx] <= 0:
+                start_idx += 1
+                end_idx += 1
+            while end_idx < data_len and melody_data[end_idx] > 0:
+                end_idx += 1
+            if start_idx < end_idx:
+                new_note = {
+                    'start': start_idx,
+                    'end': end_idx,
+                    'avg': np.average(melody_data[start_idx:end_idx])
+                }
+                notes.append(new_note)
+            start_idx = end_idx
+
+        return melody_data, timestamps, notes
 
     def process_comparison(self, extraction_type):
         if extraction_type == "melodia":
@@ -376,11 +397,12 @@ class MelodyExtraction:
             label = label.rstrip(", ")
 
             print("--")
-            processed_data, processed_timestamps = self.process_data(copy.deepcopy(data), copy.deepcopy(timestamps),
-                                                                     fix_octaves=fix_octaves,
-                                                                     smooth_false_negatives=smooth_false_negatives,
-                                                                     remove_false_positives=remove_false_positives,
-                                                                     remove_spikes=remove_spikes)
+            processed_data, processed_timestamps, notes = self.process_data(copy.deepcopy(data),
+                                                                            copy.deepcopy(timestamps),
+                                                                            fix_octaves=fix_octaves,
+                                                                            smooth_false_negatives=smooth_false_negatives,
+                                                                            remove_false_positives=remove_false_positives,
+                                                                            remove_spikes=remove_spikes)
 
             colors = np.repeat("blue", len(timestamps))
             colors[np.argwhere(data != processed_data)] = "red"
@@ -427,9 +449,9 @@ class Singing:
         self.song_length_in_samples, self.song_length_in_seconds, self.song_sr, _, _, _ = sndinfo(self.path)
         self.song_length_in_samples = int(self.song_length_in_samples)
         self.song_sr = int(self.song_sr)
-        self.song_vol = 0.4
+        self.song_vol = 0.2
         self.song_sample = SfPlayer(self.path, mul=self.song_vol)
-        self.vocal_filter = Biquadx(self.song_sample * (1 / self.song_vol), freq=800, q=0.75)
+        self.vocal_filter = Biquadx(self.song_sample * (1 / self.song_vol), freq=800, q=0.75, type=2)
         self.shimi_audio_samples = []
 
         self.melody_extraction = MelodyExtraction(self.path, resource_path=self.resource_path)
@@ -450,26 +472,14 @@ class Singing:
 
         self.shimi_sample = random.choice(self.shimi_audio_samples)
 
+        self.frequency_timestep = self.melody_timestamps[1] - self.melody_timestamps[0]
         self.speed_index = 0
-
         self.speeds = []
-        current_start = -1
-        current_end = -1
-        for freq, timestamp in zip(self.melody_data, self.melody_timestamps):
-            if freq > 0 and current_start < 0:
-                current_start = timestamp
-            if freq <= 0 and current_start >= 0:
-                current_end = timestamp
-                speed = self.shimi_sample.LENGTH / (current_end - current_start)
-                self.speeds.append(speed)
-                current_start = -1
-                current_end = -1
-        if current_start > 0 and current_end < 0:  # catch melody that doesn't end with silence
-            current_end = self.melody_timestamps[-1]
-            speed = self.shimi_sample.LENGTH / (current_end - current_start)
+
+        for note in self.melody_extraction.notes:
+            speed = self.shimi_sample.LENGTH / ((note['end'] - note['start']) * self.frequency_timestep)
             self.speeds.append(speed)
 
-        self.frequency_timestep = self.melody_timestamps[1] - self.melody_timestamps[0]
         self.frequency_setter = Pattern(self.set_freq, time=float(self.frequency_timestep))
         self.frequency_index = 1
         self.prev_freq = self.melody_data[0]
@@ -492,7 +502,7 @@ class Singing:
 
         self.prev_freq = new_freq
 
-        if self.frequency_index == len(self.melody_data) - 1:  # Stop it because otherwise it will loop forever
+        if self.frequency_index == len(self.melody_data) - 1:  # stop it because otherwise it will loop forever
             self.frequency_setter.stop()
             for s in self.shimi_audio_samples:
                 s.stop()
