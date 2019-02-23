@@ -73,7 +73,7 @@ class MelodyExtraction:
         self.abs_path = op.abspath(self.path)
         self.name = "_".join(self.abs_path.split('/')[-1].split('.')[:-1])
 
-        self.deep_learning_path = "/media/nvidia/disk1/Vocal-Melody-Extraction"
+        self.deep_learning_path = "/media/nvidia/disk2/Vocal-Melody-Extraction"
         self.deep_learning_model_path = op.join(self.deep_learning_path, "pretrained_models", "Seg")
         self.deep_learning_data = None
         self.deep_learning_timestamps = None
