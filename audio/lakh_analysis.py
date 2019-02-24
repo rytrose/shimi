@@ -15,6 +15,8 @@ import os.path as op
 import json
 import random
 from subprocess import Popen
+import sqlite3
+from tqdm import tqdm
 
 
 class LakhMidiAnalysis:
@@ -47,15 +49,16 @@ class LakhMidiAnalysis:
 
     def msd_id_get_info(self, msd_id):
         with tables.open_file(self.msd_id_to_h5(msd_id)) as metadata:
-            title = metadata.root.metadata.songs.cols.title[0]
-            artist = metadata.root.metadata.songs.cols.artist_name[0]
-            release = metadata.root.metadata.songs.cols.release[0]
-            return title, artist, release
+            title = metadata.root.metadata.songs.cols.title[0].decode('utf-8')
+            artist = metadata.root.metadata.songs.cols.artist_name[0].decode('utf-8')
+            release = metadata.root.metadata.songs.cols.release[0].decode('utf-8')
+            genre = metadata.root.metadata.songs.cols.genre[0].decode('utf-8')
+            return title, artist, release, genre
 
     def msd_id_print_info(self, msd_id):
-        title, artist, release = self.msd_id_get_info(msd_id)
+        title, artist, release, genre = self.msd_id_get_info(msd_id)
         path = self.msd_id_to_mp3(msd_id)
-        print('"{}" by {} on "{}" [ID: {}]\nPath {}'.format(title, artist, release, msd_id, path))
+        print('"{}" by {} on "{}, genre {}" [ID: {}]\nPath {}'.format(title, artist, release, genre, msd_id, path))
 
     def sing_msd_id(self, msd_id, extraction_type="cnn"):
         self.singing_object.sing_audio(self.msd_id_to_wav(msd_id), extraction_type=extraction_type)
@@ -66,9 +69,9 @@ class LakhMidiAnalysis:
             id_idx = random.randrange(len(self.match_scores.keys()))
             msd_id = list(self.match_scores.keys())[id_idx]
 
-        title, artist, release = self.msd_id_get_info(msd_id)
+        title, artist, release, _ = self.msd_id_get_info(msd_id)
 
-        print('Analyzing "{}" by {} on "{}" [ID: {}]'.format(title, artist, release, msd_id))
+        print('Analyzing "{}" by {} [ID: {}]'.format(title, artist, msd_id))
 
         mp3_path = self.msd_id_to_mp3(msd_id)
         wav_path = ".".join(mp3_path.split(".")[:-1]) + ".wav"
@@ -154,6 +157,43 @@ class LakhMidiAnalysis:
 
         plt.show()
 
+    def fill_database(self, database_path="/Volumes/Ryan_Drive/sqlite/shimi_library.db"):
+        if not op.exists(database_path):
+            print("No database exists, not populating database.")
+            return
+
+        conn = sqlite3.connect(database_path)
+        c = conn.cursor()
+        c.execute("select count(msd_id) from songs")
+        conn.commit()
+        num_rows = c.fetchone()[0]
+
+        if num_rows != 0:
+            print("Database already populated with %d rows, not populating.", num_rows)
+            return
+
+        BATCH_SIZE = 100
+        batch_i = 0
+        i = 0
+        rows = []
+        msd_ids = self.match_scores.keys()
+        num_ids = len(msd_ids)
+        for msd_id in tqdm(msd_ids):
+            title, artist_name, release, genre = self.msd_id_get_info(msd_id)
+            row = (msd_id, title, artist_name, release, genre)
+            rows.append(row)
+
+            if batch_i == BATCH_SIZE - 1 or i == num_ids - 1:
+                try:
+                    c.executemany("insert into songs values (?,?,?,?,?)", rows)
+                    conn.commit()
+                except Exception as e:
+                    print("Unable to commit to database:", e)
+                rows = []
+                batch_i = 0
+            else:
+                batch_i += 1
+            i += 1
 
 if __name__ == '__main__':
     lm = LakhMidiAnalysis('/Volumes/Ryan_Drive/Datasets/Lakh_MIDI')
