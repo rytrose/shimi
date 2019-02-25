@@ -3,6 +3,8 @@ const express = require('express')
 const cors = require('cors')
 const morgan = require('morgan')
 const sqlite = require('sqlite')
+const osc = require('osc')
+const ws = require('ws')
 
 const app = express()
 app.use(morgan('combined'))
@@ -18,6 +20,30 @@ if (process.arch === 'arm64') {
 }
 
 const dbPromise = sqlite.open(dbPath, {Promise})
+
+/*
+ * Set up OSC for communication with Python
+ */
+// Establishes a UDP address/port to receive from (local) and an address/port to send to (remote)
+let udp = new osc.UDPPort({
+    localAddress: "127.0.0.1",
+    localPort: 6100,
+    remoteAddress: "127.0.0.1",
+    remotePort: 6101
+})
+
+// This function is called when the UDP port is opened and ready to use
+udp.on("ready", () => {
+    console.log("OSC Listening on port " + udp.options.localPort + ", sending to port " + udp.options.remotePort);
+})
+
+// This function is called when the UDP port gets a message
+udp.on("message", function (message) {
+  console.log(message.address, message.args)
+})
+
+// Open the UDP port
+udp.open();
 
 app.get('/songs', async (req, res, next) => {
   try {
