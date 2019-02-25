@@ -9,7 +9,14 @@ app.use(morgan('combined'))
 app.use(express.json())
 app.use(cors())
 
-const dbPath = '/Volumes/Ryan_Drive/sqlite/shimi_library.db'
+let dbPath
+
+if (process.arch === 'arm64') {
+  dbPath = '/media/nvidia/disk2/shimi_library.db'
+} else {
+  dbPath = '/Volumes/Ryan_Drive/sqlite/shimi_library.db'
+}
+
 const dbPromise = sqlite.open(dbPath, {Promise})
 
 app.get('/songs', async (req, res, next) => {
