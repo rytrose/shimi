@@ -5,6 +5,16 @@ from pythonosc import osc_server, dispatcher, udp_client
 import threading
 from audio.singing import Singing
 import requests
+import os.path as op
+
+TEMP_DIR = 'temp'
+TEMP_AUDIO_FILENAME = 'temp.wav'
+TEMP_CNN_FILENAME = 'temp.txt'
+TEMP_MELODIA_FILENAME = 'temp.p'
+TEMP_AUDIO_DIR = op.join(TEMP_DIR, "audio")
+TEMP_CNN_DIR = op.join(TEMP_DIR, "cnn")
+TEMP_MELODIA_DIR = op.join(TEMP_DIR, "melodia")
+
 
 class WebappController:
     def __init__(self):
@@ -31,6 +41,29 @@ class WebappController:
 
     def _sing_handler(self, address, args):
         args = list(args)
-        msd_id = args
+        msd_id = args[0]
+        extraction_type = args[1]
+
+        # Get wav file
+        r = requests.get("http://shimi-dataset-server.serveo.net/fetch/audio/%s" % msd_id)
+        open(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME), 'wb').write(r.content)
+
+        # Get melody extraction file
+        if extraction_type == "melodia":
+            r = requests.get("http://shimi-dataset-server.serveo.net/fetch/melodia/%s" % msd_id)
+            open(op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME), 'wb').write(r.content)
+            self.singing.sing_audio(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME), "melodia",
+                                    op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME))
+            os.remove(op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME))
+        else:
+            r = requests.get("http://shimi-dataset-server.serveo.net/fetch/cnn/%s" % msd_id)
+            open(op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME), 'wb').write(r.content)
+            self.singing.sing_audio(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME), "cnn",
+                                    op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME))
+            os.remove(op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME))
+
+        os.remove(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME))
 
 
+if __name__ == '__main__':
+    c = WebappController()

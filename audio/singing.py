@@ -426,7 +426,7 @@ class MelodyExtraction:
 class Singing:
     def __init__(self, init_pyo=False, duplex=False, resource_path="/home/nvidia/shimi/audio"):
         self.duplex = duplex
-        self.vocal_paths = glob.glob(op.join("audio_files", "shimi_vocalizations", "*"))
+        self.vocal_paths = glob.glob(op.join(resource_path, "audio_files", "shimi_vocalizations", "*"))
         self.resource_path = resource_path
 
         if init_pyo:
@@ -444,7 +444,7 @@ class Singing:
             self.server.deactivateMidi()
             self.server.boot().start()
 
-    def audio_initialize(self, audio_path, extraction_type="cnn"):
+    def audio_initialize(self, audio_path, extraction_type="cnn", extraction_file=None):
         self.path = audio_path
         self.song_length_in_samples, self.song_length_in_seconds, self.song_sr, _, _, _ = sndinfo(self.path)
         self.song_length_in_samples = int(self.song_length_in_samples)
@@ -456,13 +456,27 @@ class Singing:
 
         self.melody_extraction = MelodyExtraction(self.path, resource_path=self.resource_path)
         if extraction_type == "melodia":
-            self.melody_extraction.melodia_extraction()
-            self.melody_data = self.melody_extraction.melodia_data
-            self.melody_timestamps = self.melody_extraction.melodia_timestamps
+            if extraction_file:
+                melody_data = pickle.load(open(extraction_file, "rb"))
+                self.melody_data, self.melody_timestamps, self.melody_extraction.notes = self.melody_extraction.process_data(
+                    melody_data["frequencies"], melody_data["timestamps"])
+            else:
+                self.melody_extraction.melodia_extraction()
+                self.melody_data = self.melody_extraction.melodia_data
+                self.melody_timestamps = self.melody_extraction.melodia_timestamps
         else:
-            self.melody_extraction.deep_learning_extraction()
-            self.melody_data = self.melody_extraction.deep_learning_data
-            self.melody_timestamps = self.melody_extraction.deep_learning_timestamps
+            if extraction_file:
+                deep_learning_data = np.loadtxt(extraction_file)
+                melody_data = deep_learning_data[:, 1]
+                np.place(melody_data, melody_data <= 0, 0)
+                num_points = melody_data.shape[0]
+                melody_timestamps = [(i / num_points) * self.melody_extraction.length_seconds for i in range(num_points)]
+                self.melody_data, self.melody_timestamps, self.melody_extraction.notes = self.melody_extraction.process_data(
+                    melody_data, melody_timestamps)
+            else:
+                self.melody_extraction.deep_learning_extraction()
+                self.melody_data = self.melody_extraction.deep_learning_data
+                self.melody_timestamps = self.melody_extraction.deep_learning_timestamps
 
         self.length_seconds = self.melody_extraction.length_seconds
 
@@ -519,8 +533,8 @@ class Singing:
         self.shimi_sample.stop()
         self.shimi_sample = random.choice(self.shimi_audio_samples)
 
-    def sing_audio(self, audio_path, extraction_type):
-        self.audio_initialize(audio_path, extraction_type)
+    def sing_audio(self, audio_path, extraction_type, extraction_file=None):
+        self.audio_initialize(audio_path, extraction_type=extraction_type, extraction_file=extraction_file)
         self.frequency_setter.play()
         self.song_sample.out()
 
