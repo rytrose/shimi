@@ -116,9 +116,7 @@ app.post('/processed', async (req, res, next) => {
     let msdId = req.body.msdId
     const db = await dbPromise
 
-    await Promise.all(
-      db.all('UPDATE songs SET processed=1 WHERE msd_id=?', msdId)
-    )
+    await db.run('UPDATE songs SET processed = 1 WHERE msd_id = ?', msdId)
 
     res.send(
       'ok'
