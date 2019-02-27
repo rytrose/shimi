@@ -26,24 +26,24 @@ const dbPromise = sqlite.open(dbPath, {Promise})
  */
 // Establishes a UDP address/port to receive from (local) and an address/port to send to (remote)
 let udp = new osc.UDPPort({
-    localAddress: "127.0.0.1",
-    localPort: 6100,
-    remoteAddress: "127.0.0.1",
-    remotePort: 6101
+  localAddress: '127.0.0.1',
+  localPort: 6100,
+  remoteAddress: '127.0.0.1',
+  remotePort: 6101
 })
 
 // This function is called when the UDP port is opened and ready to use
-udp.on("ready", () => {
-    console.log("OSC Listening on port " + udp.options.localPort + ", sending to port " + udp.options.remotePort);
+udp.on('ready', () => {
+  console.log('OSC Listening on port ' + udp.options.localPort + ', sending to port ' + udp.options.remotePort)
 })
 
 // This function is called when the UDP port gets a message
-udp.on("message", function (message) {
+udp.on('message', function (message) {
   console.log(message.address, message.args)
 })
 
 // Open the UDP port
-udp.open();
+udp.open()
 
 app.get('/songs', async (req, res, next) => {
   try {
@@ -105,6 +105,23 @@ app.get('/queried', async (req, res, next) => {
 
     res.send(
       songs
+    )
+  } catch (err) {
+    next(err)
+  }
+})
+
+app.post('/processed', async (req, res, next) => {
+  try {
+    let msdId = req.body.msdId
+    const db = await dbPromise
+
+    await Promise.all(
+      db.all('UPDATE songs SET processed=1 WHERE msd_id=?', msdId)
+    )
+
+    res.send(
+      'ok'
     )
   } catch (err) {
     next(err)
