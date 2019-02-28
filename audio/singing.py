@@ -434,13 +434,13 @@ class Singing:
             pa_list_devices()
 
             # Mac testing
-            self.server = Server()
-            # if self.duplex:
-            #     self.server = Server(sr=16000, ichnls=4)
-            #     self.server.setInOutDevice(2)
-            # else:
-            #     self.server = Server(sr=16000, duplex=0)
-            #     self.server.setOutputDevice(2)
+            #self.server = Server()
+            if self.duplex:
+                self.server = Server(sr=16000, ichnls=4)
+                self.server.setInOutDevice(2)
+            else:
+                self.server = Server(sr=16000, duplex=0)
+                self.server.setOutputDevice(2)
             self.server.deactivateMidi()
             self.server.boot().start()
 

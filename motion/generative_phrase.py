@@ -89,13 +89,13 @@ class GenerativePhrase:
         if random_movement:
             foot = self.random_movement(self.shimi.foot, length, seed)
             moves.append(foot)
-            torso = self.random_movement(self.shimi.torso, length, seed + "a")
+            torso = self.random_movement(self.shimi.torso, length, seed + int(seed / 3))
             moves.append(torso)
-            neck_ud = self.random_movement(self.shimi.neck_ud, length, seed + "b")
+            neck_ud = self.random_movement(self.shimi.neck_ud, length, seed + int(seed / 5))
             moves.append(neck_ud)
-            phone = self.random_movement(self.shimi.phone, length, seed + "c")
+            phone = self.random_movement(self.shimi.phone, length, seed + int(seed / 7))
             moves.append(phone)
-            neck_lr = self.random_movement(self.shimi.neck_lr, length, seed + "d")
+            neck_lr = self.random_movement(self.shimi.neck_lr, length, seed + int(seed / 11))
             moves.append(neck_lr)
         else:
             foot = self.foot_movement(tempo, length, valence, arousal)
@@ -492,16 +492,22 @@ class GenerativePhrase:
     def random_movement(self, motor, length, seed):
         random.seed(seed)
 
-        move_pos = random.random()
-        move_dur = random.random() * length
+        if motor == self.shimi.torso:
+            move_pos = 0.3 + (random.random() * 0.7)
+        else:
+            move_pos = random.random()
+        move_dur = random.random() * (length / 2)
 
         t = move_dur
 
         rand_move = Move(self.shimi, motor, move_pos, move_dur)
 
         while t < length:
-            move_pos = random.random()
-            move_dur = random.random() * length
+            if motor == self.shimi.torso:
+                move_pos = 0.5 + (random.random() * 0.5)
+            else:
+                move_pos = random.random()
+            move_dur = random.random() * (length / 2)
             rand_move.add_move(move_pos, move_dur)
             t += move_dur
 

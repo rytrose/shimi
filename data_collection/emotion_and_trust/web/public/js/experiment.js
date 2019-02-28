@@ -21,8 +21,19 @@ let setupOnClicks = () => {
 let onBegin = (event) => {
     event.preventDefault();
     $('#beginContainer').hide();
-    $('#waiting').show();
-    oscClient.send("/get_trial", []);
+
+    let timer = new Timer();
+    $('#timerContainer').show();
+    timer.start({countdown: true, startValues: {seconds: 5}});
+    $('#timer').html(timer.getTimeValues().seconds.toString()).fadeIn();
+    timer.addEventListener('secondsUpdated', function (e) {
+            $('#timer').html(timer.getTimeValues().seconds.toString());
+    });
+    timer.addEventListener('targetAchieved', function (e) {
+        $('#timerContainer').hide();
+        $('#waiting').show();
+        oscClient.send("/get_trial", []);
+    });
 }
 
 let onQuadButton = (event) => {

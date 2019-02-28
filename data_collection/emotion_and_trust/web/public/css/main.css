@@ -23,8 +23,8 @@ body {
 
 .buttonContainer > button {
     text-align: center;
-    width: 300px;
-    height: 300px;
+    width: 200px;
+    height: 200px;
     float: left;
     background: lightgray;
     margin: 40px;
