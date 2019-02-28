@@ -57,6 +57,15 @@
             <v-ons-icon icon="fa-spinner" size="26px" spin></v-ons-icon>
           </div>
 
+          <!--<v-ons-action-sheet-->
+          <!--:visible.sync="songActionVisible"-->
+          <!--cancelable-->
+          <!--title="Song Action"-->
+          <!--&gt;-->
+          <!--<v-ons-action-sheet-button icon="md-square-o">Process</v-ons-action-sheet-button>-->
+          <!--<v-ons-action-sheet-button icon="md-square-o">Sing</v-ons-action-sheet-button>-->
+          <!--</v-ons-action-sheet>-->
+
         </v-ons-page>
 
         <!--Load processed songs-->
@@ -93,6 +102,15 @@
       <v-ons-tab label="Processed Songs"></v-ons-tab>
     </v-ons-tabbar>
 
+    <v-ons-action-sheet
+      :visible.sync="songActionVisible"
+      cancelable
+    >
+      <v-ons-action-sheet-button @click="processOrSing()">{{ isProcessed ? "Sing" : "Process" }}</v-ons-action-sheet-button>
+      <v-ons-action-sheet-button modifier="destructive" @click="songActionVisible = false">Cancel
+      </v-ons-action-sheet-button>
+    </v-ons-action-sheet>
+
   </v-ons-page>
 </template>
 
@@ -111,7 +129,10 @@ export default {
       queryString: '',
       query: {},
       queryParams: ['Title', 'Artist', 'Release'],
-      checkedQueryParams: ['Title']
+      checkedQueryParams: ['Title'],
+      songActionVisible: false,
+      isProcessed: false,
+      lastClickedID: ''
     }
   },
   created () {
@@ -139,8 +160,12 @@ export default {
       this.resultsLoaded += numResults
       this.loading = false
     },
-    songClicked (song) {
-      console.log('Clicked:', song)
+    async songClicked (song) {
+      this.isProcessed = false
+      const response = await SongsService.isProcessed(song.msd_id)
+      this.isProcessed = response.data.processed === 1
+      this.songActionVisible = true
+      this.lastClickedID = song.msd_id
     },
     clear () {
       this.songs = []
@@ -189,6 +214,16 @@ export default {
         this.fetchFn = SongsService.fetchQueriedSongs
         this.load()
       }
+    },
+    processOrSing () {
+      if (this.isProcessed) {
+        // Sing
+        SongsService.sing(this.lastClickedID, 'cnn')
+      } else {
+        // Process
+        SongsService.process(this.lastClickedID)
+      }
+      this.songActionVisible = false
     }
   },
   watch: {

@@ -92,6 +92,9 @@ app.get('/queried', async (req, res, next) => {
       sqlString += ' release LIKE ?, '
       sqlParams.push('%' + query.query + '%')
     }
+    if (query.processed === true) {
+      sqlString += ' processed=1, '
+    }
 
     sqlString = sqlString.substring(0, sqlString.length - 2)
 
@@ -111,6 +114,21 @@ app.get('/queried', async (req, res, next) => {
   }
 })
 
+app.get('/isProcessed', async (req, res, next) => {
+  try {
+    let msdId = req.query.msdId
+    const db = await dbPromise
+
+    const val = await db.get('SELECT processed FROM songs WHERE msd_id = ?', msdId)
+
+    res.send(
+      val
+    )
+  } catch (err) {
+    next(err)
+  }
+})
+
 app.post('/processed', async (req, res, next) => {
   try {
     let msdId = req.body.msdId
@@ -124,6 +142,39 @@ app.post('/processed', async (req, res, next) => {
   } catch (err) {
     next(err)
   }
+})
+
+app.post('/sing', (req, res, next) => {
+  let msdId = req.body.msdId
+  let extractionType = req.body.extractionType
+
+  let msg = {
+    address: '/sing',
+    args: [{
+      type: 's',
+      value: msdId
+    },
+    {
+      type: 's',
+      value: extractionType
+    }]
+  }
+
+  udp.send(msg)
+})
+
+app.post('/process', (req, res, next) => {
+  let msdId = req.body.msdId
+
+  let msg = {
+    address: '/process',
+    args: [{
+      type: 's',
+      value: msdId
+    }]
+  }
+
+  udp.send(msg)
 })
 
 const port = process.env.PORT || 8081

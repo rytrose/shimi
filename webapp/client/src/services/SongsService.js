@@ -25,5 +25,24 @@ export default {
         offset
       }
     })
+  },
+  isProcessed (msdId) {
+    return Api().get('isProcessed', {
+      params: {
+        msdId
+      }
+    })
+  },
+  sing (msdId, extractionType) {
+    return Api().post('sing', {
+      msdId,
+      extractionType
+    })
+  },
+  process (msdId) {
+    return Api().post('process', {
+      msdId
+    })
   }
+
 }

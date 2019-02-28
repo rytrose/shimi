@@ -22,7 +22,8 @@ class WebappController:
         self.dispatcher = dispatcher.Dispatcher()
 
         #   handler functions need to take 2 arguments, first the address, then the arguments
-        # self.dispatcher.map("/test", self._test_handler)
+        self.dispatcher.map("/sing", self._sing_handler)
+        self.dispatcher.map("/process", self._process_handler)
 
         # Server for listening for OSC messages
         self.local_address = "127.0.0.1"
@@ -39,11 +40,7 @@ class WebappController:
 
         self.singing = Singing(init_pyo=True, resource_path="/Users/rytrose/Cloud/GTCMT/shimi/audio")
 
-    def _sing_handler(self, address, args):
-        args = list(args)
-        msd_id = args[0]
-        extraction_type = args[1]
-
+    def _sing_handler(self, address, msd_id, extraction_type):
         # Get wav file
         r = requests.get("http://shimi-dataset-server.serveo.net/fetch/audio/%s" % msd_id)
         open(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME), 'wb').write(r.content)
@@ -63,6 +60,10 @@ class WebappController:
             os.remove(op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME))
 
         os.remove(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME))
+
+    def _process_handler(self, address, msd_id):
+        r = requests.get("http://shimi-dataset-server.serveo.net/process/%s" % msd_id)
+        print("Process response", r.content)
 
 
 if __name__ == '__main__':
