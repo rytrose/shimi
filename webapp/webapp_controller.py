@@ -6,6 +6,9 @@ import threading
 from audio.singing import Singing
 import requests
 import os.path as op
+import multiprocessing
+from pyo import *
+import time
 
 TEMP_DIR = 'temp'
 TEMP_AUDIO_FILENAME = 'temp.wav'
@@ -14,6 +17,28 @@ TEMP_MELODIA_FILENAME = 'temp.p'
 TEMP_AUDIO_DIR = op.join(TEMP_DIR, "audio")
 TEMP_CNN_DIR = op.join(TEMP_DIR, "cnn")
 TEMP_MELODIA_DIR = op.join(TEMP_DIR, "melodia")
+
+
+class SingingProcessWrapper(multiprocessing.Process):
+    def __init__(self, connection):
+        super(SingingProcessWrapper, self).__init__()
+        self.daemon = False
+        self._connection = connection
+        self._terminated = False
+
+    def run(self):
+        self.singing = Singing(init_pyo=True)
+
+        while not self._terminated:
+            args = self._connection.recv()
+            try:
+                self.singing.sing_audio(args["audio_file"], args["extraction_type"], args["analysis_file"])
+                self._connection.send("ok")
+            except Exception as e:
+                self._connection.send(e)
+
+    def stop(self):
+        self._terminated = True
 
 
 class WebappController:
@@ -38,7 +63,10 @@ class WebappController:
         self.remote_port = 6100
         self.osc_client = udp_client.SimpleUDPClient(self.remote_address, self.remote_port)
 
-        self.singing = Singing(init_pyo=True, resource_path="/Users/rytrose/Cloud/GTCMT/shimi/audio")
+        # self.singing = Singing(init_pyo=True, resource_path="/home/nvidia/shimi/audio")
+        (self.client_pipe, self.server_pipe) = multiprocessing.Pipe()
+        self.singing_process = SingingProcessWrapper(self.server_pipe)
+        self.singing_process.start()
 
     def _sing_handler(self, address, msd_id, extraction_type):
         # Get wav file
@@ -49,17 +77,35 @@ class WebappController:
         if extraction_type == "melodia":
             r = requests.get("http://shimi-dataset-server.serveo.net/fetch/melodia/%s" % msd_id)
             open(op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME), 'wb').write(r.content)
-            self.singing.sing_audio(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME), "melodia",
-                                    op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME))
-            os.remove(op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME))
+            # self.singing.sing_audio(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME), "melodia",
+            #                         op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME))
+            singing_opts = {
+                "audio_file": op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME),
+                "extraction_type": "melodia",
+                "analysis_file": op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME)
+            }
+
+            self.client_pipe.send(singing_opts)
+            res = self.client_pipe.recv()
+            print(res)
+            # os.remove(op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME))
         else:
             r = requests.get("http://shimi-dataset-server.serveo.net/fetch/cnn/%s" % msd_id)
             open(op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME), 'wb').write(r.content)
-            self.singing.sing_audio(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME), "cnn",
-                                    op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME))
-            os.remove(op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME))
+            # self.singing.sing_audio(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME), "cnn",
+            #                         op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME))
+            singing_opts = {
+                "audio_file": op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME),
+                "extraction_type": "cnn",
+                "analysis_file": op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME)
+            }
 
-        os.remove(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME))
+            self.client_pipe.send(singing_opts)
+            res = self.client_pipe.recv()
+            print(res)
+            # os.remove(op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME))
+
+        # os.remove(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME))
 
     def _process_handler(self, address, msd_id):
         r = requests.get("http://shimi-dataset-server.serveo.net/process/%s" % msd_id)
