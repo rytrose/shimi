@@ -3,7 +3,7 @@ import os, sys
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from utils.utils import get_bit
-from melody_extraction import MelodyExtraction
+from audio.melody_extraction import MelodyExtraction
 import matplotlib
 
 matplotlib.use("TkAgg")
