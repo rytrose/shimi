@@ -9,6 +9,7 @@ import os.path as op
 import multiprocessing
 from pyo import *
 import time
+import psutil
 
 TEMP_DIR = 'temp'
 TEMP_AUDIO_FILENAME = 'temp.wav'
@@ -27,7 +28,14 @@ class SingingProcessWrapper(multiprocessing.Process):
         self._terminated = False
 
     def run(self):
+        def monitor():
+            print("CPU: ", psutil.cpu_percent())
+            print("Memory Available: ", psutil.virtual_memory().available)
+            print("--")
+
         self.singing = Singing(init_pyo=True)
+        # self.monitor = Pattern(monitor)
+        # self.monitor.play()
 
         while not self._terminated:
             args = self._connection.recv()
@@ -63,12 +71,13 @@ class WebappController:
         self.remote_port = 6100
         self.osc_client = udp_client.SimpleUDPClient(self.remote_address, self.remote_port)
 
-        # self.singing = Singing(init_pyo=True, resource_path="/home/nvidia/shimi/audio")
         (self.client_pipe, self.server_pipe) = multiprocessing.Pipe()
         self.singing_process = SingingProcessWrapper(self.server_pipe)
         self.singing_process.start()
 
     def _sing_handler(self, address, msd_id, extraction_type):
+        print("Prepping to sing %s..." % msd_id)
+
         # Get wav file
         r = requests.get("http://shimi-dataset-server.serveo.net/fetch/audio/%s" % msd_id)
         open(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME), 'wb').write(r.content)

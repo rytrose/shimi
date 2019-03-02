@@ -38,8 +38,7 @@
               <v-ons-row>
                 <v-ons-col width="40%"><h3>Title</h3></v-ons-col>
                 <v-ons-col width="30%"><h3>Artist</h3></v-ons-col>
-                <v-ons-col width="20%"><h3>Release</h3></v-ons-col>
-                <v-ons-col width="10%"><h3>Processed?</h3></v-ons-col>
+                <v-ons-col width="30%"><h3>Release</h3></v-ons-col>
               </v-ons-row>
             </v-ons-list-header>
 
@@ -47,8 +46,7 @@
               <v-ons-row>
                 <v-ons-col width="40%">{{ song.title }}</v-ons-col>
                 <v-ons-col width="30%">{{ song.artist_name }}</v-ons-col>
-                <v-ons-col width="20%">{{ song.release }}</v-ons-col>
-                <v-ons-col width="10%" class="center">{{ song.processed == 1 ? 'Yes' : 'No' }}</v-ons-col>
+                <v-ons-col width="30%">{{ song.release }}</v-ons-col>
               </v-ons-row>
             </v-ons-list-item>
           </v-ons-list>
@@ -75,8 +73,7 @@
               <v-ons-row>
                 <v-ons-col width="40%"><h3>Title</h3></v-ons-col>
                 <v-ons-col width="30%"><h3>Artist</h3></v-ons-col>
-                <v-ons-col width="20%"><h3>Release</h3></v-ons-col>
-                <v-ons-col width="10%"><h3>Processed?</h3></v-ons-col>
+                <v-ons-col width="30%"><h3>Release</h3></v-ons-col>
               </v-ons-row>
             </v-ons-list-header>
 
@@ -84,8 +81,7 @@
               <v-ons-row>
                 <v-ons-col width="40%">{{ song.title }}</v-ons-col>
                 <v-ons-col width="30%">{{ song.artist_name }}</v-ons-col>
-                <v-ons-col width="20%">{{ song.release }}</v-ons-col>
-                <v-ons-col width="10%" class="center">{{ song.processed == 1 ? 'Yes' : 'No' }}</v-ons-col>
+                <v-ons-col width="30%">{{ song.release }}</v-ons-col>
               </v-ons-row>
             </v-ons-list-item>
           </v-ons-list>

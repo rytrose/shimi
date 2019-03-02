@@ -77,26 +77,28 @@ app.get('/queried', async (req, res, next) => {
   try {
     let query = JSON.parse(req.query.query)
     const db = await dbPromise
-    let sqlString = 'SELECT * FROM songs WHERE'
+    let sqlString = 'SELECT * FROM songs WHERE ('
     let sqlParams = []
 
     if (query.title) {
-      sqlString += ' title LIKE ?, '
+      sqlString += ' title LIKE ? OR '
       sqlParams.push('%' + query.query + '%')
     }
     if (query.artist_name) {
-      sqlString += ' artist_name LIKE ?, '
+      sqlString += ' artist_name LIKE ? OR '
       sqlParams.push('%' + query.query + '%')
     }
     if (query.release) {
-      sqlString += ' release LIKE ?, '
+      sqlString += ' release LIKE ? OR '
       sqlParams.push('%' + query.query + '%')
     }
-    if (query.processed === true) {
-      sqlString += ' processed=1, '
-    }
 
-    sqlString = sqlString.substring(0, sqlString.length - 2)
+    sqlString = sqlString.substring(0, sqlString.length - 3)
+    sqlString += ') '
+
+    if (query.processed === true) {
+      sqlString += ' AND processed=1'
+    }
 
     sqlString += ' ORDER BY title ASC LIMIT ? OFFSET ?'
     sqlParams.push(req.query.numResults)
@@ -161,6 +163,10 @@ app.post('/sing', (req, res, next) => {
   }
 
   udp.send(msg)
+
+  res.send(
+      'ok'
+  )
 })
 
 app.post('/process', (req, res, next) => {
@@ -175,6 +181,10 @@ app.post('/process', (req, res, next) => {
   }
 
   udp.send(msg)
+
+  res.send(
+    'ok'
+  )
 })
 
 const port = process.env.PORT || 8081

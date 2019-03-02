@@ -21,9 +21,8 @@ import random
 import glob
 import argparse
 
-
 class Sample:
-    def __init__(self, path, mul=1, balance=None):
+    def __init__(self, path, balance=None):
         PVSIZE = 1024
         PVOLAPS = 4
 
@@ -33,33 +32,35 @@ class Sample:
         self.LENGTH = self.info[1]
         self.SR = self.info[2]
         self.snd_player = SfPlayer(self.path)
-
         self.pv_analysis = PVAnal(self.snd_player, size=PVSIZE, overlaps=PVOLAPS)
-        self.speed_table = LinTable([(0, 1), (512, 1)], size=512)
-        self.speed_object = PVBufTabLoops(self.pv_analysis, self.speed_table, length=self.LENGTH)
+        self.pointer = Phasor(freq=1.0/self.LENGTH)
         self.trans_value = SigTo(1, time=0.005)
-        self.trans_object = PVTranspose(self.speed_object, transpo=self.trans_value)
-        self.adsr = Adsr(attack=0.02, mul=mul)
-        self.pv_synth = PVSynth(self.trans_object, mul=self.adsr)
+        self.pv_buffer = PVBuffer(self.pv_analysis, self.pointer, pitch=self.trans_value, length=self.LENGTH)
+        self.adsr = Adsr(attack=0.01)
+
         if balance is None:
+            self.pv_synth = PVSynth(self.pv_buffer, mul=self.adsr)
             self.output = self.pv_synth
         else:
+            self.pv_synth = PVSynth(self.pv_buffer)
             self.output = Balance(self.pv_synth, balance, mul=self.adsr)
 
     def play(self):
-        self.speed_object.reset()
         self.adsr.play()
         self.output.out()
 
     def stop(self):
         self.adsr.stop()
-        # self.output.stop()
+        CallAfter(lambda: self.output.stop(), self.adsr.release)  # TODO check this????????
 
     def set_transposition(self, val):
         self.trans_value.setValue(val)
 
     def set_speed(self, val):
-        self.speed_table.replace([(0, val), (512, val)])
+        self.pointer.setFreq(val)
+
+    def set_phase(self, val):
+        self.pointer.setPhase(val)
 
 
 class MelodyExtraction:
@@ -427,6 +428,7 @@ class Singing:
     def __init__(self, init_pyo=False, duplex=False, resource_path="/home/nvidia/shimi/audio"):
         self.duplex = duplex
         self.vocal_paths = glob.glob(op.join(resource_path, "audio_files", "shimi_vocalizations", "*"))
+        self.shimi_vocal_path = op.join(resource_path, "audio_files", "shimi_vocalization.wav")
         self.resource_path = resource_path
 
         if init_pyo:
@@ -434,7 +436,7 @@ class Singing:
             pa_list_devices()
 
             # Mac testing
-            #self.server = Server()
+            # self.server = Server()
             if self.duplex:
                 self.server = Server(sr=16000, ichnls=4)
                 self.server.setInOutDevice(2)
@@ -449,9 +451,9 @@ class Singing:
         self.song_length_in_samples, self.song_length_in_seconds, self.song_sr, _, _, _ = sndinfo(self.path)
         self.song_length_in_samples = int(self.song_length_in_samples)
         self.song_sr = int(self.song_sr)
-        self.song_vol = 0.2
+        self.song_vol = 0.1
         self.song_sample = SfPlayer(self.path, mul=self.song_vol)
-        self.vocal_filter = Biquadx(self.song_sample * (1 / self.song_vol), freq=800, q=0.75, type=2)
+        self.vocal_filter = Biquadx(self.song_sample, freq=800, q=0.75, type=2, mul=(1 / self.song_vol))
         self.shimi_audio_samples = []
 
         self.melody_extraction = MelodyExtraction(self.path, resource_path=self.resource_path)
@@ -470,7 +472,8 @@ class Singing:
                 melody_data = deep_learning_data[:, 1]
                 np.place(melody_data, melody_data <= 0, 0)
                 num_points = melody_data.shape[0]
-                melody_timestamps = [(i / num_points) * self.melody_extraction.length_seconds for i in range(num_points)]
+                melody_timestamps = [(i / num_points) * self.melody_extraction.length_seconds for i in
+                                     range(num_points)]
                 self.melody_data, self.melody_timestamps, self.melody_extraction.notes = self.melody_extraction.process_data(
                     melody_data, melody_timestamps)
             else:
@@ -480,19 +483,16 @@ class Singing:
 
         self.length_seconds = self.melody_extraction.length_seconds
 
-        for path in self.vocal_paths:
-            shimi_sample = Sample(path, balance=self.vocal_filter)
-            self.shimi_audio_samples.append(shimi_sample)
-
-        self.shimi_sample = random.choice(self.shimi_audio_samples)
+        self.shimi_sample = Sample(self.shimi_vocal_path, balance=self.vocal_filter)
 
         self.frequency_timestep = self.melody_timestamps[1] - self.melody_timestamps[0]
         self.speed_index = 0
         self.speeds = []
 
         for note in self.melody_extraction.notes:
-            speed = self.shimi_sample.LENGTH / ((note['end'] - note['start']) * self.frequency_timestep)
-            self.speeds.append(speed)
+            speed = 1 / (4 * (((note['end'] - note['start']) * self.frequency_timestep) + (2 * self.shimi_sample.adsr.release)))
+            self.speeds.append(float(speed))
+
 
         self.frequency_setter = Pattern(self.set_freq, time=float(self.frequency_timestep))
         self.frequency_index = 1
@@ -526,12 +526,13 @@ class Singing:
 
     def start_vocal(self):
         self.shimi_sample.set_speed(self.speeds[self.speed_index])
+        self.shimi_sample.set_phase(0.25 * random.randint(0, 3))
         self.shimi_sample.play()
         self.speed_index = (self.speed_index + 1) % len(self.speeds)
 
     def end_vocal(self):
         self.shimi_sample.stop()
-        self.shimi_sample = random.choice(self.shimi_audio_samples)
+        # self.shimi_sample = random.choice(self.shimi_audio_samples)
 
     def sing_audio(self, audio_path, extraction_type, extraction_file=None):
         self.audio_initialize(audio_path, extraction_type=extraction_type, extraction_file=extraction_file)
