@@ -2,7 +2,7 @@ import os, sys
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
-from audio.singing import MelodyExtraction
+from melody_exctraction import MelodyExtraction
 import argparse
 
 if __name__ == '__main__':
