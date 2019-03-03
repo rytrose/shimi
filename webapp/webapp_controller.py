@@ -10,6 +10,7 @@ import multiprocessing
 from pyo import *
 import time
 import psutil
+import argparse
 
 TEMP_DIR = 'temp'
 TEMP_AUDIO_FILENAME = 'temp.wav'
@@ -79,7 +80,7 @@ class WebappController:
         if extraction_type == "melodia":
             r = requests.get("http://shimi-dataset-server.serveo.net/fetch/melodia/%s" % msd_id)
             open(op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME), 'wb').write(r.content)
-            
+
             singing_opts = {
                 "audio_file": op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME),
                 "extraction_type": "melodia",
@@ -100,9 +101,9 @@ class WebappController:
                 "analysis_file": op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME)
             }
 
-            self.client_pipe.send(singing_opts)
-            res = self.client_pipe.recv()
-            print(res)
+        self.client_pipe.send(singing_opts)
+        res = self.client_pipe.recv()
+        print(res)
 
     def _process_handler(self, address, msd_id):
         r = requests.get("http://shimi-dataset-server.serveo.net/process/%s" % msd_id)

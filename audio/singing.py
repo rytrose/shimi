@@ -70,6 +70,7 @@ class Singing:
         self.vocal_paths = glob.glob(op.join(resource_path, "audio_files", "shimi_vocalizations", "*"))
         self.shimi_vocal_path = op.join(resource_path, "audio_files", "shimi_vocalization.wav")
         self.resource_path = resource_path
+        self.playing = False
 
         if init_pyo:
             self.server = Server()
@@ -158,6 +159,7 @@ class Singing:
             self.frequency_setter.stop()
             self.shimi_sample.stop()
             self.song_sample.stop()
+            self.playing = False
 
         self.frequency_index = (self.frequency_index + 1) % len(self.melody_data)
 
@@ -173,8 +175,11 @@ class Singing:
     def sing_audio(self, audio_path, extraction_type, extraction_file=None):
         self.audio_initialize(audio_path, extraction_type=extraction_type, extraction_file=extraction_file)
         self.frequency_setter.play()
-        # self.song_sample.out()
         self.song_sample.out(delay=0.01)
+
+        self.playing = True
+        while self.playing:
+            pass
 
     def sing_midi(self, midi_path):
         self.name = "_".join(midi_path.split('/')[-1].split('.')[:-1])
