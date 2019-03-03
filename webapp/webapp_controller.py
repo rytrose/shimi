@@ -34,8 +34,7 @@ class SingingProcessWrapper(multiprocessing.Process):
         while not self._terminated:
             args = self._connection.recv()
             try:
-                self.singing.sing_audio(args["audio_file"], args["extraction_type"], args["analysis_file"])
-                self._connection.send("ok")
+                self.singing.sing_audio(args["audio_file"], args["extraction_type"], args["analysis_file"], starting_callback=lambda: self._connection.send("started"))
             except Exception as e:
                 self._connection.send(e)
 

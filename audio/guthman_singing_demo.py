@@ -3,10 +3,16 @@ import os, sys
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from PyInquirer import prompt
 from webapp.webapp_controller import SingingProcessWrapper
+from motion.jam import Jam
+from shimi import Shimi
+from librosa.core import load
+from librosa.beat import tempo as estimate_tempo
+from spotify.login import get_authorized_spotipy
 import sqlite3
 import multiprocessing
 import os.path as op
 import time
+import pickle
 
 AUDIO_PATH = op.join(os.getcwd(), "audio_files")
 CNN_PATH = op.join(os.getcwd(), "cnn_outputs")
@@ -41,21 +47,77 @@ available_ids = ['TRKIZWL128EF342C5A', 'TRCLINP12903CB007B', 'TRCTVZG128E078ED8D
 
 choices = []
 
+song_info = {}
+
 
 def make_song_options():
     conn = sqlite3.connect('/media/nvidia/disk2/shimi_library.db')
     c = conn.cursor()
-    for id in available_ids:
-        c.execute("select title, artist_name, release from songs where msd_id=?", [id])
+    for msd_id in available_ids:
+        c.execute("select title, artist_name, release from songs where msd_id=?", [msd_id])
         song = c.fetchone()
+        song_info[msd_id] = {}
+        song_info[msd_id]['title'] = song[0]
+        song_info[msd_id]['artist_name'] = song[1]
+        song_info[msd_id]['release'] = song[2]
+
         choices.append({
             'name': '"%s" by %s (on %s)' % (song[0], song[1], song[2]),
-            'value': id
+            'value': msd_id
         })
 
 
+def get_song_info():
+    global song_info, choices
+    if op.exists("song_info.p"):
+        song_info = pickle.load(open("song_info.p", 'rb'))
+        choices = song_info['choices']
+    else:
+        make_song_options()
+        song_info['choices'] = choices
+        spotify_client = get_authorized_spotipy('rytrose')
+
+        for msd_id in available_ids:
+            song_filename = op.join(AUDIO_PATH, "%s.wav" % msd_id)
+            y, sr = load(song_filename)
+            song_info[msd_id]['length'] = y.shape[0] / sr
+            song_info[msd_id]['librosa_tempo'] = 60 / float(estimate_tempo(y, sr))
+
+            if not 'danceability' in song_info[msd_id].keys():
+                search = spotify_client.search(song_info[msd_id]['title'])
+                uri = ""
+                for item in search['tracks']['items']:
+                    print("Title: %s" % item['name'])
+                    artists = "Artists:"
+                    for artist in item['artists']:
+                        artists += " %s" % artist['name']
+                    print(artists)
+                    print("Album: %s" % item['album']['name'])
+                    correct = input("Does this match: %s by %s on %s? " % (
+                    song_info[msd_id]['title'], song_info[msd_id]['artist_name'], song_info[msd_id]['release']))
+                    if correct == "y":
+                        uri = item['uri']
+                        break
+                if uri != "":
+                    features = spotify_client.audio_features(uri)[0]
+                    song_info[msd_id]['danceability'] = features['danceability']
+                    song_info[msd_id]['energy'] = features['energy']
+                    song_info[msd_id]['loudness'] = features['loudness']
+                    song_info[msd_id]['speechiness'] = features['speechiness']
+                    song_info[msd_id]['acousticness'] = features['acousticness']
+                    song_info[msd_id]['instrumentalness'] = features['instrumentalness']
+                    song_info[msd_id]['liveness'] = features['liveness']
+                    song_info[msd_id]['valence'] = features['valence']
+
+            pickle.dump(song_info, open("song_info.p", 'wb'))
+
+        pickle.dump(song_info, open("song_info.p", 'wb'))
+
+
 if __name__ == '__main__':
-    make_song_options()
+    shimi = Shimi()
+    get_song_info()
+
     (client_pipe, server_pipe) = multiprocessing.Pipe()
     singing_process = SingingProcessWrapper(server_pipe)
     singing_process.start()
@@ -81,9 +143,18 @@ if __name__ == '__main__':
                 "analysis_file": cnn_filename
             }
 
+            length = song_info[msd_id]['length']
+            tempo = song_info[msd_id]['librosa_tempo']
+
+            move = Jam(shimi, tempo, length)
+
             client_pipe.send(singing_opts)
             res = client_pipe.recv()
-            print(res)
+
+            move.start()
+            move.join()
+            shimi.initial_position()
+
         except KeyboardInterrupt:
             print("Exiting...")
             break

@@ -172,14 +172,20 @@ class Singing:
     def end_vocal(self):
         self.shimi_sample.stop()
 
-    def sing_audio(self, audio_path, extraction_type, extraction_file=None):
+    def sing_audio(self, audio_path, extraction_type, extraction_file=None, starting_callback=None, blocking=False):
         self.audio_initialize(audio_path, extraction_type=extraction_type, extraction_file=extraction_file)
         self.frequency_setter.play()
-        self.song_sample.out(delay=0.01)
+        self.delay = 0.01
+        self.song_sample.out(delay=self.delay)
+        time.sleep(self.delay)
+
+        if starting_callback:
+            starting_callback()
 
         self.playing = True
-        while self.playing:
-            pass
+        if blocking:
+            while self.playing:
+                pass
 
     def sing_midi(self, midi_path):
         self.name = "_".join(midi_path.split('/')[-1].split('.')[:-1])
