@@ -146,7 +146,12 @@ if __name__ == '__main__':
             length = song_info[msd_id]['length']
             tempo = song_info[msd_id]['librosa_tempo']
 
-            move = Jam(shimi, tempo, length)
+            energy = None
+
+            if 'energy' in song_info[msd_id].keys():
+                energy = song_info[msd_id]['energy']
+
+            move = Jam(shimi, tempo, length, energy)
 
             client_pipe.send(singing_opts)
             res = client_pipe.recv()
