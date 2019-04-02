@@ -10,3 +10,13 @@ spotify/.cache-*
 spotify/client_credentials.py
 shimi-google-cloud-credentials.json
 credentials/
+audio/.cache-*
+audio/audio_files/*.wav
+audio/cnn_outputs/*.txt
+audio/melodia_outputs/*.p
+*.pyc
+data_collection/emotion_and_trust/*.png
+audio/input_recordings
+posenet/posenet_python/images
+posenet/posenet_python/models
+temp
