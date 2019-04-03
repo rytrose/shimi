@@ -17,10 +17,11 @@ class BluetoothClient:
         self.listening_thread = None
         self.mappings = {}
 
-    def connect(self):
-        atexit.register(self.stop_pairing)
-        self.allow_pairing()
         self.setup_socket()
+        atexit.register(self.stop_pairing)
+
+    def connect(self):
+        self.allow_pairing()
         self.advertise()
         self.wait_for_connection()
 
@@ -100,7 +101,8 @@ class BluetoothClient:
                         except Exception as e:
                             print("Unable to parse incoming data.", e)
         except IOError as e:
-            print(e)
+            print("Bluetooth connection error:", e)
+            self.connect()
 
 
 if __name__ == '__main__':
