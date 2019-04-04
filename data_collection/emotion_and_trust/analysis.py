@@ -2,6 +2,8 @@ import pickle
 import glob
 import pandas as pd
 from sklearn.metrics import confusion_matrix, classification_report
+from scipy import stats
+import statsmodels.stats.api as sms
 import matplotlib.pyplot as plt
 import itertools
 import numpy as np
@@ -121,7 +123,7 @@ def make_df():
     })
 
 
-def analyze():
+def analyze(data):
     shimi_spoken_grouped = data.groupby("group")
     overall_shimi_cm = None
     overall_shimi_report = None
@@ -234,111 +236,145 @@ def analyze():
 
     print("Shimi voice overall:")
     print(overall_shimi_cm)
-    plot_confusion_matrix(overall_shimi_cm, title='Shimi Voice Overall',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='shimi_overall.png')
+    # plot_confusion_matrix(overall_shimi_cm, title='Shimi Voice Overall',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='shimi_overall.png')
     print(overall_shimi_report)
 
     print("--")
 
     print("Shimi audio only:")
     print(audio_only_shimi_cm)
-    plot_confusion_matrix(audio_only_shimi_cm, title='Shimi Audio Only',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='shimi_audio_only.png')
+    # plot_confusion_matrix(audio_only_shimi_cm, title='Shimi Audio Only',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='shimi_audio_only.png')
     print(audio_only_shimi_report)
 
     print("--")
 
     print("Shimi random gesture with audio:")
     print(random_audio_shimi_cm)
-    plot_confusion_matrix(random_audio_shimi_cm, title='Shimi Random Gesture With Audio',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='shimi_random_audio.png')
+    # plot_confusion_matrix(random_audio_shimi_cm, title='Shimi Random Gesture With Audio',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='shimi_random_audio.png')
     print(random_audio_shimi_report)
 
     print("--")
 
     print("Shimi random gesture no audio:")
     print(random_silent_shimi_cm)
-    plot_confusion_matrix(random_silent_shimi_cm, title='Shimi Random Gesture No Audio',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='shimi_random_no_audio.png')
+    # plot_confusion_matrix(random_silent_shimi_cm, title='Shimi Random Gesture No Audio',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='shimi_random_no_audio.png')
     print(random_silent_shimi_report)
 
     print("--")
 
     print("Shimi linked gesture with audio:")
     print(linked_audio_shimi_cm)
-    plot_confusion_matrix(linked_audio_shimi_cm, title='Shimi Generated Gesture With Audio',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='shimi_generated_audio.png')
+    # plot_confusion_matrix(linked_audio_shimi_cm, title='Shimi Generated Gesture With Audio',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='shimi_generated_audio.png')
     print(linked_audio_shimi_report)
 
     print("--")
 
     print("Shimi linked gesture no audio:")
     print(linked_silent_shimi_cm)
-    plot_confusion_matrix(linked_silent_shimi_cm, title='Shimi Generated Gesture No Audio',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='shimi_generated_no_audio.png')
+    # plot_confusion_matrix(linked_silent_shimi_cm, title='Shimi Generated Gesture No Audio',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='shimi_generated_no_audio.png')
     print(linked_silent_shimi_report)
 
     print("----------------------------------")
 
     print("Spoken voice overall:")
     print(overall_spoken_confusion_matrix)
-    plot_confusion_matrix(overall_spoken_confusion_matrix, title='Spoken Voice Overall',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='spoken_overall.png')
+    # plot_confusion_matrix(overall_spoken_confusion_matrix, title='Spoken Voice Overall',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='spoken_overall.png')
     print(overall_spoken_report)
 
     print("--")
 
     print("Spoken audio only:")
     print(audio_only_spoken_cm)
-    plot_confusion_matrix(audio_only_spoken_cm, title='Spoken Audio Only',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='spoken_audio_only.png')
+    # plot_confusion_matrix(audio_only_spoken_cm, title='Spoken Audio Only',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='spoken_audio_only.png')
     print(audio_only_spoken_report)
 
     print("--")
 
     print("Spoken random gesture with audio:")
     print(random_audio_spoken_cm)
-    plot_confusion_matrix(random_audio_spoken_cm, title='Spoken Random Gesture With Audio',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='spoken_random_audio.png')
+    # plot_confusion_matrix(random_audio_spoken_cm, title='Spoken Random Gesture With Audio',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='spoken_random_audio.png')
     print(random_audio_spoken_report)
 
     print("--")
 
     print("Spoken random gesture no audio:")
     print(random_silent_spoken_cm)
-    plot_confusion_matrix(random_silent_spoken_cm, title='Spoken Random Gesture No Audio',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='spoken_random_no_audio.png')
+    # plot_confusion_matrix(random_silent_spoken_cm, title='Spoken Random Gesture No Audio',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='spoken_random_no_audio.png')
     print(random_silent_spoken_report)
 
     print("--")
 
     print("Spoken linked gesture with audio:")
     print(linked_audio_spoken_cm)
-    plot_confusion_matrix(linked_audio_spoken_cm, title='Spoken Generated Gesture With Audio',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='spoken_generated_audio.png')
+    # plot_confusion_matrix(linked_audio_spoken_cm, title='Spoken Generated Gesture With Audio',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='spoken_generated_audio.png')
     print(linked_audio_spoken_report)
 
     print("--")
 
     print("Spoken linked gesture no audio:")
     print(linked_silent_spoken_cm)
-    plot_confusion_matrix(linked_silent_spoken_cm, title='Spoken Generated Gesture No Audio',
-                          target_names=["angry", "calm", "happy", "sad"], normalize=False,
-                          filename='spoken_generated_no_audio.png')
+    # plot_confusion_matrix(linked_silent_spoken_cm, title='Spoken Generated Gesture No Audio',
+    #                       target_names=["angry", "calm", "happy", "sad"], normalize=False,
+    #                       filename='spoken_generated_no_audio.png')
     print(linked_silent_spoken_report)
 
 
+def ttests(data):
+    shimi_trials = data.groupby("group").get_group('shimivoice').groupby('with_audio').get_group(True).groupby(
+        'trial_type')
+
+    random_trials = shimi_trials.get_group('randomgesture').groupby('timestamp')
+    random_trials_acc = []
+
+    for t, random_trial in random_trials:
+        correct = random_trial[random_trial['ground_truth'] == random_trial['reported']].count()[0]
+        total = random_trial.count()[0]
+        acc = correct / total
+        print("Random: (%s) %d / %d (%f)" % (t, correct, total, acc))
+        if total == 8:
+            random_trials_acc.append(acc)
+
+    generated_trials = shimi_trials.get_group('linkedgesture').groupby('timestamp')
+    generated_trials_acc = []
+
+    for t, generated_trial in generated_trials:
+        correct = generated_trial[generated_trial['ground_truth'] == generated_trial['reported']].count()[0]
+        total = generated_trial.count()[0]
+        acc = correct / total
+        print("Generated: (%s) %d / %d (%f)" % (t, correct, total, acc))
+        if(total == 8):
+            generated_trials_acc.append(acc)
+
+    print(len(random_trials_acc), len(generated_trials_acc))
+    print(random_trials_acc, generated_trials_acc)
+    print(stats.ttest_ind(random_trials_acc, generated_trials_acc))
+    cm = sms.CompareMeans(sms.DescrStatsW(random_trials_acc), sms.DescrStatsW(generated_trials_acc))
+    print(cm.summary())
+    print(cm.tconfint_diff(usevar='pooled'))
+
 if __name__ == '__main__':
     data = make_df()
-    analyze()
+    # analyze(data)
+    ttests(data)
