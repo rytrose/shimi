@@ -6,17 +6,17 @@ import time
 
 
 def play_outkast(shimi, **kwargs):
-    # Move to initial positions
-    shimi.initial_position()
+    """Plays the song "Hey Ya" by Outkast with a sequenced gesture routine.
 
-    # Initialize audio mixer
-    mixer.init()
+    Args:
+        shimi: A reference to an initialized Shimi object to control the motors.
+        **kwargs: Any keyword arguments needed, necessary to be used as a callback in the speech recognition flow.
+    """
+    shimi.initial_position()  # Move to initial positions
+    mixer.init()  # Initialize audio mixer
+    mixer.music.load('audio/outkast.wav')  # Load song
 
-    # Load song
-    mixer.music.load('audio/outkast.wav')
-
-    # Rest for a little
-    time.sleep(0.5)
+    time.sleep(0.5)  # Rest for a little to ensure the song is loaded
 
     beat = 0.68
 
@@ -90,35 +90,31 @@ def play_outkast(shimi, **kwargs):
     foot_lin.start()
     torso.start()
 
-    # Start song
-    mixer.music.play()
+    mixer.music.play()  # Start song
+
+    # Non-blocking
 
 
 def play_opera(shimi, **kwargs):
-    # Move to initial positions
-    shimi.initial_position()
+    """Plays a Mozart aria with a sequenced gesture routine.
 
-    # Initialize audio mixer
-    mixer.init()
+    Args:
+        shimi: A reference to an initialized Shimi object to control the motors.
+        **kwargs: Any keyword arguments needed, necessary to be used as a callback in the speech recognition flow.
+    """
+    shimi.initial_position()  # Move to initial positions
+    mixer.init()  # Initialize audio mixer
+    mixer.music.load('audio/opera_long.wav')  # Load song
 
-    # Load song
-    mixer.music.load('audio/opera_long.wav')
-
-    # Load the movement
-    r = load_recorder(shimi, "opera")
+    r = load_recorder(shimi, "opera")  # Load the movement
 
     # Start moving
     move = threading.Thread(target=r.play)
     move.start()
 
-    # Allow for move to catch up
-    time.sleep(2.7)
+    time.sleep(2.7)  # Allow for move to catch up
 
-    # Start playback
-    mixer.music.play()
+    mixer.music.play()  # Start song
 
-    # Wait for move to end
-    move.join()
-
-    # Move back to initial position
-    shimi.initial_position()
+    move.join()  # Wait for move to end, blocking
+    shimi.initial_position()  # Move back to initial position
