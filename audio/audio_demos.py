@@ -18,7 +18,7 @@ def play_outkast(shimi, **kwargs):
 
     time.sleep(0.5)  # Rest for a little to ensure the song is loaded
 
-    beat = 0.68
+    beat = 0.68  # Pre-determined tempo
 
     neck_lr = Move(shimi, shimi.neck_lr, 0.2, 0.5, vel_algo='linear_ad', normalized_positions=True)
     neck_lr.add_move(0.5, 0.5, delay=0.2)

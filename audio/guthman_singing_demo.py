@@ -42,6 +42,7 @@ song_info = {}
 
 
 def make_song_options():
+    """Fetches the information and fills out a list of songs capable of being demoed."""
     conn = sqlite3.connect('/media/nvidia/disk3/shimi_library.db')
     c = conn.cursor()
     for msd_id in available_ids:
@@ -59,6 +60,7 @@ def make_song_options():
 
 
 def get_song_info():
+    """Loads or fetches information about demo songs from Spotify API."""
     global song_info, choices
     if op.exists("song_info.p"):
         make_song_options()
@@ -117,7 +119,7 @@ if __name__ == '__main__':
 
     while True:
         try:
-            os.system('clear')
+            os.system('clear')  # Get rid of all the audio printing to have cleaner console for demo selection
             chosen = prompt([{
                 'type': 'list',
                 'name': 'msd_id',

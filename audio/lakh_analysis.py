@@ -20,34 +20,37 @@ from tqdm import tqdm
 
 
 class LakhMidiAnalysis:
+    """Provides utilities for working with the Lakh MIDI Dataset."""
     def __init__(self, dataset_path):
         self.dataset_path = dataset_path
         self.match_scores = json.load(open(op.join(self.dataset_path, "match_scores.json")))
         self.singing_object = Singing(init_pyo=True, resource_path=os.getcwd())
 
     def msd_id_to_dirs(self, msd_id):
-        """Given an MSD ID, generate the path prefix.
-        e.g. TRABCD12345678 -> A/B/C/TRABCD12345678"""
+        """Given an MSD ID, generate the path prefix, e.g. TRABCD12345678 -> A/B/C/TRABCD12345678."""
         return op.join(msd_id[2], msd_id[3], msd_id[4], msd_id)
 
     def msd_id_to_mp3(self, msd_id):
-        """Given an MSD ID, return the path to the corresponding mp3"""
+        """Given an MSD ID, return the path to the corresponding mp3."""
         return op.join(self.dataset_path, 'lmd_matched_mp3', self.msd_id_to_dirs(msd_id) + '.mp3')
 
     def msd_id_to_wav(self, msd_id):
-        """Given an MSD ID, return the path to the corresponding mp3"""
+        """Given an MSD ID, return the path to the corresponding wav file.
+
+        Warning, file may not exist at this path.
+        """
         return op.join(self.dataset_path, 'lmd_matched_mp3', self.msd_id_to_dirs(msd_id) + '.wav')
 
     def msd_id_to_h5(self, msd_id):
-        """Given an MSD ID, return the path to the corresponding h5"""
+        """Given an MSD ID, return the path to the corresponding h5."""
         return os.path.join(self.dataset_path, 'lmd_matched_h5', self.msd_id_to_dirs(msd_id) + '.h5')
 
     def get_midi_path(self, msd_id, midi_md5):
-        """Given an MSD ID and MIDI MD5, return path to a MIDI file.
-        kind should be one of 'matched' or 'aligned'. """
+        """Given an MSD ID and MIDI MD5, return path to a MIDI file."""
         return os.path.join(self.dataset_path, 'lmd_aligned', self.msd_id_to_dirs(msd_id), midi_md5 + '.mid')
 
     def msd_id_get_info(self, msd_id):
+        """Retrieves the metadata associated with an MSD ID."""
         with tables.open_file(self.msd_id_to_h5(msd_id)) as metadata:
             title = metadata.root.metadata.songs.cols.title[0].decode('utf-8')
             artist = metadata.root.metadata.songs.cols.artist_name[0].decode('utf-8')
@@ -56,14 +59,22 @@ class LakhMidiAnalysis:
             return title, artist, release, genre
 
     def msd_id_print_info(self, msd_id):
+        """Prints the metadata associated with an MSD ID."""
         title, artist, release, genre = self.msd_id_get_info(msd_id)
         path = self.msd_id_to_mp3(msd_id)
         print('"{}" by {} on "{}, genre {}" [ID: {}]\nPath {}'.format(title, artist, release, genre, msd_id, path))
 
     def sing_msd_id(self, msd_id, extraction_type="cnn"):
+        """Run Shimi singing on the song with the given MSD ID."""
         self.singing_object.sing_audio(self.msd_id_to_wav(msd_id), extraction_type=extraction_type)
 
     def compare_audio_and_midi(self, msd_id=None, extraction_type="cnn"):
+        """Plots melody extraction data and MIDI data for a given MSD ID for comparison.
+
+        Args:
+            msd_id: A string Million Song Dataset identifier.
+            extraction_type: A string, either "cnn" or "melodia" determining the melody extraction model.
+        """
         if msd_id is None:
             print("Choosing random Lakh MIDI example to analyze.")
             id_idx = random.randrange(len(self.match_scores.keys()))
@@ -158,6 +169,7 @@ class LakhMidiAnalysis:
         plt.show()
 
     def fill_database(self, database_path="/Volumes/Ryan_Drive/sqlite/shimi_library.db"):
+        """Creates a SQLite database containing the metadata for all the songs in the Lakh MIDI dataset."""
         if not op.exists(database_path):
             print("No database exists, not populating database.")
             return

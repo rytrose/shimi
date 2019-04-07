@@ -1,3 +1,5 @@
+"""Runs both types of melody extraction on Shimi."""
+
 import os, sys
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
