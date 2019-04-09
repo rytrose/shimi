@@ -8,18 +8,16 @@ import multiprocessing
 import threading
 import sqlite3
 import os.path as op
+import time
 
 ALL_SONGS = 0
 PROCESSED_SONGS = 1
 QUERIED_SONGS = 2
 
-TEMP_DIR = 'temp'
-TEMP_AUDIO_FILENAME = 'temp.wav'
-TEMP_CNN_FILENAME = 'temp.txt'
-TEMP_MELODIA_FILENAME = 'temp.p'
-TEMP_AUDIO_DIR = op.join(TEMP_DIR, "audio")
-TEMP_CNN_DIR = op.join(TEMP_DIR, "cnn")
-TEMP_MELODIA_DIR = op.join(TEMP_DIR, "melodia")
+LOCAL_STORAGE_DIR = "/media/nvidia/disk3/singing_files"
+LOCAL_AUDIO_DIR = op.join(LOCAL_STORAGE_DIR, "audio")
+LOCAL_CNN_DIR = op.join(LOCAL_STORAGE_DIR, "cnn_outputs")
+LOCAL_MELODIA_DIR = op.join(LOCAL_STORAGE_DIR, "melodia_outputs")
 
 
 class SingingBluetoothDemo:
@@ -39,18 +37,18 @@ class SingingBluetoothDemo:
         self.db_path = '/media/nvidia/disk3/shimi_library.db'
 
     def fetch_all_songs(self, num_results, offset):
-        count_query = "select count(msd_id) from songs"
-        query = "select msd_id, title, artist_name, release, processed from songs order by title asc limit ? offset ?"
-        self.fetch_songs(count_query, query, [num_results, offset])
-
-    def fetch_processed_songs(self, num_results, offset):
         count_query = "select count(msd_id) from songs where processed=1"
         query = "select msd_id, title, artist_name, release, processed from songs where processed=1 order by title asc limit ? offset ?"
         self.fetch_songs(count_query, query, [num_results, offset])
 
+    # def fetch_processed_songs(self, num_results, offset):
+    #     count_query = "select count(msd_id) from songs where processed=1"
+    #     query = "select msd_id, title, artist_name, release, processed from songs where processed=1 order by title asc limit ? offset ?"
+    #     self.fetch_songs(count_query, query, [num_results, offset])
+
     def fetch_queried_songs(self, search_query, num_results, offset):
-        count_query = "select count(msd_id) from songs where (title like '%'|| ? || '%' or artist_name like '%'|| ? || '%' or release like '%'|| ? || '%')"
-        query = "select msd_id, title, artist_name, release, processed from songs where (title like '%'|| ? || '%' or artist_name like '%'|| ? || '%' or release like '%'|| ? || '%') order by title asc limit ? offset ?"
+        count_query = "select count(msd_id) from songs where (title like '%'|| ? || '%' or artist_name like '%'|| ? || '%' or release like '%'|| ? || '%') and processed=1"
+        query = "select msd_id, title, artist_name, release, processed from songs where (title like '%'|| ? || '%' or artist_name like '%'|| ? || '%' or release like '%'|| ? || '%') and processed=1 order by title asc limit ? offset ?"
         self.fetch_songs(count_query, query, [search_query, search_query, search_query, num_results, offset],
                          count_params=[search_query, search_query, search_query])
 
@@ -80,7 +78,8 @@ class SingingBluetoothDemo:
                 "processed": bool(row[4])
             })
 
-        self.bluetooth_client.send("songs", message)
+        print(message)
+        # self.bluetooth_client.send("songs", message)
 
     def on_fetch_songs(self, message):
         fetch_type = message["type"]
@@ -97,42 +96,33 @@ class SingingBluetoothDemo:
 
     def on_sing(self, message):
         msd_id = message["msd_id"]
-
+        extraction_type = message["extraction_type"]
         print("Prepping to sing %s..." % msd_id)
-
-        # Get wav file
-        r = requests.get("http://shimi-dataset-server.serveo.net/fetch/audio/%s" % msd_id)
-        open(op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME), 'wb').write(r.content)
 
         # Get melody extraction file
         if extraction_type == "melodia":
-            r = requests.get("http://shimi-dataset-server.serveo.net/fetch/melodia/%s" % msd_id)
-            open(op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME), 'wb').write(r.content)
-
             singing_opts = {
-                "audio_file": op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME),
+                "audio_file": op.join(LOCAL_AUDIO_DIR, msd_id + ".wav"),
                 "extraction_type": "melodia",
-                "analysis_file": op.join(TEMP_MELODIA_DIR, TEMP_MELODIA_FILENAME)
+                "analysis_file": op.join(LOCAL_MELODIA_DIR, "melodia_" + msd_id + ".p")
             }
 
         else:
-            r = requests.get("http://shimi-dataset-server.serveo.net/fetch/cnn/%s" % msd_id)
-            open(op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME), 'wb').write(r.content)
-
             singing_opts = {
-                "audio_file": op.join(TEMP_AUDIO_DIR, TEMP_AUDIO_FILENAME),
+                "audio_file": op.join(LOCAL_AUDIO_DIR, msd_id + ".wav"),
                 "extraction_type": "cnn",
-                "analysis_file": op.join(TEMP_CNN_DIR, TEMP_CNN_FILENAME)
+                "analysis_file": op.join(LOCAL_CNN_DIR, "cnn_" + msd_id + ".txt")
             }
 
-        self.client_pipe.send(singing_opts)
-        res = self.client_pipe.recv()
+        self.singing_client_pipe.send(singing_opts)
+        res = self.singing_client_pipe.recv()
         print(res)
 
     def on_process(self, message):
         msd_id = message["msd_id"]
         r = requests.get("http://shimi-dataset-server.serveo.net/process/%s" % msd_id)
         print("Process response", r.content)
+
 
 if __name__ == '__main__':
     d = SingingBluetoothDemo()
