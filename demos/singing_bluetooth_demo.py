@@ -78,8 +78,7 @@ class SingingBluetoothDemo:
                 "processed": bool(row[4])
             })
 
-        print(message)
-        # self.bluetooth_client.send("songs", message)
+        self.bluetooth_client.send("songs", message)
 
     def on_fetch_songs(self, message):
         fetch_type = message["type"]
