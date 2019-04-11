@@ -15,7 +15,7 @@ def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax
     
     Args:
         shimi (Shimi): An instance of the Shimi motor controller class.
-        motors (List[int]): Motors IDs to play back the recorded.
+        motors (List[int]): Motors IDs on which to playback the recorded gesture.
         duration (float): Length of the playback in seconds.
         timestamps (List[float]): The timestamps of the position and velocity data.
         pos_matrix (List[List[float]]): The position data for each motor.
