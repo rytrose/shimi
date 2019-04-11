@@ -16,13 +16,15 @@ user_scope = 'user-library-read user-follow-read playlist-read-private ' \
 
 
 def get_authorized_spotipy(username, scope=user_scope):
+    """Opens a browser window to log a user into Spotify.
+    
+    Args:
+        username (str): The username to login with.
+        scope (str, optional): Defaults to user_scope. A list of scopes desired for the Spotify API.
+    
+    Returns:
+        spotipy.Spotify: An authorized spotipy client.
     """
-    Opens a browser window to log a user into Spotify.
-    :param username: the username to login with, used for caching
-    :param scope: a space-delimited list of scopes to request access to
-    :return:
-    """
-
     token = obtain_token_localhost(username, os.environ["SPOTIPY_CLIENT_ID"], os.environ["SPOTIPY_CLIENT_SECRET"],
                                    os.environ["SPOTIPY_REDIRECT_URI"], scope=scope)
 

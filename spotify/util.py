@@ -1,3 +1,5 @@
+"""Graciously taken from https://github.com/csernazs/spotipy/commit/34e1398946b6ce2b1fba7279601b06548d4169a0"""
+
 from __future__ import print_function
 import sys
 import socket
