@@ -4,10 +4,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from utils.utils import get_bit
 from audio.melody_extraction import MelodyExtraction
-import matplotlib
 
-matplotlib.use("TkAgg")
-import matplotlib.pyplot as plt
 import pretty_midi as pm
 import numpy as np
 import os.path as op
