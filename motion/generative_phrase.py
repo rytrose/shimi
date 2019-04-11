@@ -366,11 +366,11 @@ class GenerativePhrase:
 
     def torso_movement(self, valence, arousal):
         """Moves torso forward and back according to music and movement research.
-        
+
         Args:
             valence (float): Valence value in range [-1.0, 1.0].
             arousal (float): Arouse value in range [-1.0, 1.0].
-        
+
         Returns:
             Move: A Thread of properly sequenced movements.
         """
@@ -444,13 +444,13 @@ class GenerativePhrase:
 
     def foot_movement(self, tempo, length, valence, arousal):
         """Moves foot up and down according to music and movement research.
-        
+
         Args:
             tempo (float): Tempo of the MIDI file in seconds per beat.
             length (float): Length of the MIDI file in seconds.
             valence (float): Valence value in range [-1.0, 1.0].
             arousal (float): Arouse value in range [-1.0, 1.0].
-        
+
         Returns:
             Move: A Thread of properly sequenced movements.
         """
@@ -507,13 +507,13 @@ class GenerativePhrase:
 
     def phone_movement(self, tempo, length, valence, arousal):
         """Twists the phone cradle DoF in a swaying motion according to music and movement research.
-        
+
         Args:
             tempo (float): Tempo of the MIDI file in seconds per beat.
             length (float): Length of the MIDI file in seconds.
             valence (float): Valence value in range [-1.0, 1.0].
             arousal (float): Arouse value in range [-1.0, 1.0].
-        
+
         Returns:
             Move: A Thread of properly sequenced movements.
         """
@@ -566,13 +566,13 @@ class GenerativePhrase:
 
     def phone_movement_onsets(self, tempo, length, valence, arousal):
         """Twists the phone cradle DoF based on musical onsets and according to music and movement research.
-        
+
         Args:
             tempo (float): Tempo of the MIDI file in seconds per beat.
             length (float): Length of the MIDI file in seconds.
             valence (float): Valence value in range [-1.0, 1.0].
             arousal (float): Arouse value in range [-1.0, 1.0].
-        
+
         Returns:
             Move: A Thread of properly sequenced movements.
         """
@@ -626,12 +626,12 @@ class GenerativePhrase:
 
     def random_movement(self, motor, length, seed):
         """Generates a sequence of random movements for the length of the MIDI file for one motor.
-        
+
         Args:
             motor (int): The motor ID to generate random movements for.
             length (float): Length of the MIDI file in seconds.
             seed (str): A seed for the RNG to make randomness deterministic.
-        
+
         Returns:
             Move: A Thread of properly sequenced movements.
         """
