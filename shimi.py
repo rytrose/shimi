@@ -7,8 +7,12 @@ import time
 from pprint import pprint
 
 class Shimi:
-    # Constructor
+    """Abstraction around Shimi motor controller."""
+
     def __init__(self, silent=False):
+        """[summary]
+            silent (bool, optional): Defaults to False. [description]
+        """
         try:
             # Setup serial connection to motors and get the controller
             self.controller = self.setup(silent)
@@ -35,9 +39,6 @@ class Shimi:
 
         if not silent:
             print('Found motors with the following IDs:', ids)
-
-            # Current settings for found motors
-            # pprint(controller.get_control_table(ids))
 
         return controller
 

@@ -100,7 +100,7 @@ def play_opera(shimi, **kwargs):
 
     Args:
         shimi (Shimi): A reference to an initialized Shimi object to control the motors.
-        **kwargs ()dict: Any keyword arguments needed, necessary to be used as a callback in the speech recognition flow.
+        **kwargs (dict): Any keyword arguments needed, necessary to be used as a callback in the speech recognition flow.
     """
     shimi.initial_position()  # Move to initial positions
     mixer.init()  # Initialize audio mixer

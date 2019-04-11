@@ -28,7 +28,7 @@ class PVSample:
 
         Args:
             path (str): A path to the audio file to play.
-            balance (pyo.Balance): A pyo object to balance the RMS of this sample player with.
+            balance (pyo.Balance, optional): A pyo object to balance the RMS of this sample player with.
         """
         PVSIZE = 1024
         PVOLAPS = 4
@@ -94,9 +94,9 @@ class Singing:
         """Initializes audio server if needed and establishes resource path.
 
         Args:
-            init_pyo (bool): Determines whether or not to start pyo.
-            duplex (bool): Determines whether or not to use microphone input (True) or not (False).
-            resource_path (str): The path to directory containing singing files.
+            init_pyo (bool, optional): Determines whether or not to start pyo.
+            duplex (bool, optional): Determines whether or not to use microphone input (True) or not (False).
+            resource_path (str, optional): The path to directory containing singing files.
         """
         self.duplex = duplex
         self.vocal_paths = glob.glob(
@@ -126,8 +126,8 @@ class Singing:
 
         Args:
             audio_path (str): The path to audio file to sing and play.
-            extraction_type (str): Either "cnn" or "melodia" determining the melody extraction model.
-            extraction_file (str): The path to a melody extraction output data file to use.
+            extraction_type (str, optional): Either "cnn" or "melodia" determining the melody extraction model.
+            extraction_file (str, optional): The path to a melody extraction output data file to use.
         """
         self.path = audio_path
         self.song_length_in_samples, self.song_length_in_seconds, self.song_sr, _, _, _ = sndinfo(
@@ -239,9 +239,9 @@ class Singing:
         Args:
             audio_path (str): The path to the audio file to be played.
             extraction_type (str): Either "cnn" or "melodia" determining the melody extraction model.
-            extraction_file (str): The path to a melody extraction output data file to use.
-            starting_callback (function): An optional function to call when singing playback starts. Can be used to start getsure.
-            blocking (bool): Determines whether or not this function should wait for playback to finish to return.
+            extraction_file (str, optional): The path to a melody extraction output data file to use.
+            starting_callback (function, optional): Function to call when singing playback starts. Can be used to start getsure.
+            blocking (bool, optional): Determines whether or not this function should wait for playback to finish to return.
         """
         self.audio_initialize(
             audio_path, extraction_type=extraction_type, extraction_file=extraction_file)

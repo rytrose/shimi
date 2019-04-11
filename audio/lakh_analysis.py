@@ -72,8 +72,8 @@ class LakhMidiAnalysis:
         """Plots melody extraction data and MIDI data for a given MSD ID for comparison.
 
         Args:
-            msd_id (str): A Million Song Dataset identifier.
-            extraction_type (str): Either "cnn" or "melodia" determining the melody extraction model.
+            msd_id (str, optional): A Million Song Dataset identifier.
+            extraction_type (str, optional): Either "cnn" or "melodia" determining the melody extraction model.
         """
         if msd_id is None:
             print("Choosing random Lakh MIDI example to analyze.")

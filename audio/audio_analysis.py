@@ -63,7 +63,7 @@ class AudioAnalysisServer(multiprocessing.Process):
 
         Args:
             connection (multiprocessing.Pipe): Used to communicate with the client.
-            duplex (bool): Specifies whether or not to configure microphone input in addition to audio output.
+            duplex (bool, optional): Specifies whether or not to configure microphone input in addition to audio output.
         """
         super(AudioAnalysisServer, self).__init__()
         self.daemon = False

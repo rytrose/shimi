@@ -21,7 +21,7 @@ class MidiAnalysis:
         """Gets the tempo of the MIDI file.
 
         Args:
-            t (float): The time in seconds at which to get the tempo.
+            t (float, optional): The time in seconds at which to get the tempo.
 
         Returns: 
             float: The tempo of the MIDI file at time t in seconds per beat.
