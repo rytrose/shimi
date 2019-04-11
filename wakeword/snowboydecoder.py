@@ -1,3 +1,4 @@
+"""Part of Snowboy examples."""
 #!/usr/bin/env python
 
 import collections
