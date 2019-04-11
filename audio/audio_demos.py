@@ -9,8 +9,8 @@ def play_outkast(shimi, **kwargs):
     """Plays the song "Hey Ya" by Outkast with a sequenced gesture routine.
 
     Args:
-        shimi: A reference to an initialized Shimi object to control the motors.
-        **kwargs: Any keyword arguments needed, necessary to be used as a callback in the speech recognition flow.
+        shimi (Shimi): A reference to an initialized Shimi object to control the motors.
+        **kwargs (dict): Any keyword arguments needed, necessary to be used as a callback in the speech recognition flow.
     """
     shimi.initial_position()  # Move to initial positions
     mixer.init()  # Initialize audio mixer
@@ -99,8 +99,8 @@ def play_opera(shimi, **kwargs):
     """Plays a Mozart aria with a sequenced gesture routine.
 
     Args:
-        shimi: A reference to an initialized Shimi object to control the motors.
-        **kwargs: Any keyword arguments needed, necessary to be used as a callback in the speech recognition flow.
+        shimi (Shimi): A reference to an initialized Shimi object to control the motors.
+        **kwargs ()dict: Any keyword arguments needed, necessary to be used as a callback in the speech recognition flow.
     """
     shimi.initial_position()  # Move to initial positions
     mixer.init()  # Initialize audio mixer

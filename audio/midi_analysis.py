@@ -21,9 +21,10 @@ class MidiAnalysis:
         """Gets the tempo of the MIDI file.
 
         Args:
-            t: Float time in seconds at which to get the tempo.
+            t (float): The time in seconds at which to get the tempo.
 
-        Returns: The tempo of the MIDI file at time t in seconds per beat.
+        Returns: 
+            float: The tempo of the MIDI file at time t in seconds per beat.
         """
         tempo_change_times, tempi = self.pm_obj.get_tempo_changes()
 
@@ -44,7 +45,8 @@ class MidiAnalysis:
     def get_normalized_pitch_contour(self):
         """Gets a pitch contour for the MIDI melody, normalized for the range of the melody between 0-1.
 
-        Returns: A list of note objects with a norm_pitch attribute, and start/end times in seconds.
+        Returns: 
+            List[dict]: Notes with a norm_pitch attribute, and start/end times in seconds.
         """
         interval = self.m21_obj.analyze('range')
         pitch_range = interval.semitones
@@ -69,7 +71,8 @@ class MidiAnalysis:
     def get_measure_keys(self):
         """Gets a key estimation for every measure, with timestamps.
 
-        Returns: A list of measures with a music21 key object and a timestamp.
+        Returns: 
+            List[dict]: Measures with a music21 key object and a timestamp.
         """
         measure_times = self.pm_obj.get_downbeats()
         measure_keys = []
@@ -86,7 +89,8 @@ class MidiAnalysis:
     def get_length(self):
         """Gets the length of the piece in seconds.
 
-        Returns: A float of the length in seconds.
+        Returns: 
+            float: The length in seconds.
         """
         num_beats = len(self.pm_obj.get_beats())
         tempo = self.get_tempo()
@@ -95,8 +99,10 @@ class MidiAnalysis:
     def get_shortest_note_length(self):
         """Gets the length of the shortest note that occurs in the piece, in seconds.
 
-        Returns: A float of the length of the shortest note in seconds.
+        Returns:
+            float: The length of the shortest note in seconds.
         """
+        
         shortest_length = 99999
         for note in self.pm_obj.instruments[0].notes:
             length = note.end - note.start
@@ -108,7 +114,8 @@ class MidiAnalysis:
     def get_longest_note_length(self):
         """Gets the length of the longest note that occurs in the piece, in seconds.
 
-        Returns: A float of the length of the longest note in seconds.
+        Returns: 
+            float: The length of the longest note in seconds.
         """
         longest_length = -1
         for note in self.pm_obj.instruments[0].notes:

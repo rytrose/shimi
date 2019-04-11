@@ -22,8 +22,8 @@ class MelodyExtraction:
         """Establishes resource paths and an audio file path to run melody extraction on.
 
         Args:
-            path: A string path to the audio file to process.
-            resource_path: A string path to the root of the folder defining outputs and helper scripts.
+            path (str): The path to the audio file to process.
+            resource_path (str): The path to the root of the folder defining outputs and helper scripts.
         """
         self.resource_path = resource_path
         self.path = path
@@ -47,7 +47,7 @@ class MelodyExtraction:
         """Runs CNN melody extraction model on Shimi, with optional processing.
 
         Args:
-            process: A boolean determining whether or not post-processing should be applied.
+            process (bool): A flag determining whether or not post-processing should be applied.
         """
         if not op.exists(op.join(self.resource_path, "cnn_outputs", "cnn_" + self.name + ".txt")):
             # Tensorflow only runs with python3.5 on Shimi, so it must be run in new process
@@ -81,7 +81,7 @@ class MelodyExtraction:
         """Runs melodia melody extraction model on Shimi, with optional processing.
 
         Args:
-            process: A boolean determining whether or not post-processing should be applied.
+            process (bool): A flag determining whether or not post-processing should be applied.
         """
         if not op.exists(op.join("melodia_outputs", "melodia_" + self.name + ".p")):
             command_string = "exagear -- " + op.join(self.run_melodia_path,
@@ -103,12 +103,12 @@ class MelodyExtraction:
         """Post-process output of melody extraction model to fix errors
 
         Args:
-            melody_data: A list of time-frequency data to process.
-            timestamps: A list of timestamps for the time-frequency data.
-            fix_octaves: A boolean determining whether or not to try to fix octaves.
-            smooth_false_negatives: A boolean determining whether or not to fill in missing false negatives.
-            remove_false_positives: A boolean determining whether or not to remove false positives.
-            remove_spikes: A boolean determining whether or not to remove outlier points.
+            melody_data (list): The time-frequency data to process.
+            timestamps (list): The timestamps for the time-frequency data.
+            fix_octaves (bool): A flag determining whether or not to try to fix octaves.
+            smooth_false_negatives (bool): A flag determining whether or not to fill in missing false negatives.
+            remove_false_positives (bool): A flag determining whether or not to remove false positives.
+            remove_spikes (bool): A flag determining whether or not to remove outlier points.
         """
         data_len = len(melody_data)
         timestep = timestamps[1] - timestamps[0]
@@ -351,7 +351,7 @@ class MelodyExtraction:
         """Compares all combinations of post-processing on melody extraction data.
 
         Args:
-            extraction_type: A string, either "cnn" or "melodia" determining the type of melody extraction model.
+            extraction_type (str): Either "cnn" or "melodia" determining the type of melody extraction model.
         """
         if extraction_type == "melodia":
             self.melodia_extraction(process=False)

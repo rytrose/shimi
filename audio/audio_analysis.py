@@ -22,9 +22,9 @@ class AudioAnalysisClient:
         """Used to pass a function call to the audio server.
 
         Args:
-            function_string: The name of the server function to call.
-            *args: A tuple of any arguments to be passed to the server, must be serializable.
-            **kwargs: A dict of any keword arguments to be passed to the server, must be serializable.
+            function_string (str): The name of the server function to call.
+            *args (tuple): Any arguments to be passed to the server, must be serializable.
+            **kwargs (dict): Any keword arguments to be passed to the server, must be serializable.
 
         Returns:
             A response from the server.
@@ -62,8 +62,8 @@ class AudioAnalysisServer(multiprocessing.Process):
         """Runs audio processing and analysis with pyo in a dedicated process.
 
         Args:
-            connection: A multiprocessing.Pipe used to communicate with the client.
-            duplex: A bool specifying whether or not to configure microphone input in addition to audio output.
+            connection (multiprocessing.Pipe): Used to communicate with the client.
+            duplex (bool): Specifies whether or not to configure microphone input in addition to audio output.
         """
         super(AudioAnalysisServer, self).__init__()
         self.daemon = False
