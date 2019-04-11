@@ -1,3 +1,5 @@
+"""Runs melodia melody extraction on Shimi."""
+
 import vamp
 import soundfile as sf
 import argparse

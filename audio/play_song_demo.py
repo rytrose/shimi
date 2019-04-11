@@ -1,3 +1,5 @@
+"""Uses voice recognition to play sequenced song demos."""
+
 from pypot.utils import StoppableThread
 from matt.SpeechRecognizer import *
 from nltk.corpus import stopwords
@@ -5,6 +7,7 @@ from nltk.stem.snowball import EnglishStemmer
 from audio.audio_demos import play_opera, play_outkast
 from motion.move import Thinking, No
 import time
+
 
 def init_demo(self, shimi):
     self.shimi = shimi
@@ -17,6 +20,7 @@ def init_demo(self, shimi):
         "outkast": play_outkast
     }
 
+
 def get_microphone(self):
     # Get the recognizer object
     recognizer = SpeechRecognizer(respeaker=True)
@@ -27,6 +31,7 @@ def get_microphone(self):
     print("...done calibrating.")
 
     return recognizer
+
 
 def extract_demo(self, phrase):
     if not phrase:
@@ -81,6 +86,7 @@ def extract_demo(self, phrase):
     else:
         print("I don't understand: {}".format(phrase))
         return None
+
 
 class PlaySongDemoOnce:
     def __init__(self, shimi):

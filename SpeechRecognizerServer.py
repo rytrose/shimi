@@ -18,17 +18,33 @@ def py_error_handler(filename, line, function, err, fmt):
 
 
 def silence_alsa():
-    ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+    ERROR_HANDLER_FUNC = CFUNCTYPE(
+        None, c_char_p, c_int, c_char_p, c_int, c_char_p)
     c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
     asound = cdll.LoadLibrary('libasound.so')
     asound.snd_lib_error_set_handler(c_error_handler)
 
 
 class SpeechRecognizerServer:
+    """Runs speech recognition processes.
+    
+    N.B. This requires the uses of a fork of Uberi/speech_recognition found here: https://github.com/rytrose/speech_recognition
+    The fork allows for a callback function when hot word is detected, which is very useful for Shimi acknowledgement. It also has minor
+    performance improvements.
+
+    """
+
     def __init__(self, respeaker=True, mic_index=2, snowboy_configuration=None):
+        """Connects to Shimi's microphone and establishes OSC endpoint.
+            respeaker (bool, optional): Defaults to True. Determines whether to look for the ReSpeaker microphone inside of Shimi.
+            mic_index (int, optional): Defaults to 2. Specifies the input device index to use.
+            snowboy_configuration (tuple, optional): Defaults to None. The first argument should be the location of the Snowboy library, and the second should be a list of model files.
+        """
+
         self.snowboy_configuration = snowboy_configuration
         if self.snowboy_configuration:
-            self.snowboy_configuration = (snowboy_configuration[0], snowboy_configuration[1], self.on_hotword)
+            self.snowboy_configuration = (
+                snowboy_configuration[0], snowboy_configuration[1], self.on_hotword)
 
         # Look for ReSpeaker
         mic_names = sr.Microphone.list_microphone_names()
@@ -36,7 +52,8 @@ class SpeechRecognizerServer:
         for index, name in enumerate(mic_names):
             if len(name) > 8 and name[:9] == "ReSpeaker":
                 mic_index = index
-            print("Microphone with name \"{1}\" found for `Microphone(device_index={0})`".format(index, name))
+            print("Microphone with name \"{1}\" found for `Microphone(device_index={0})`".format(
+                index, name))
 
         self.r = sr.Recognizer()
 
@@ -70,6 +87,14 @@ class SpeechRecognizerServer:
             self.r.adjust_for_ambient_noise(source)
 
     def listen_for_phrase(self, timeout, phrase_time_limit, source):
+        """Waits for hotword (if config provided) and phrase.
+        
+        Args:
+            timeout (float): Time in seconds to listen for before returning nothing if no voice is heard.
+            phrase_time_limit (float): Time in seconds to record a phrase once voice is heard before returning.
+            source (speech_recognition.Microphone): Input resource.
+        """
+
         if timeout == -1:
             timeout = None
         if phrase_time_limit == -1:
@@ -80,29 +105,34 @@ class SpeechRecognizerServer:
             if phrase_time_limit is not None:
                 if timeout is not None:
                     if self.snowboy_configuration:
-                        print("Running snowboy with listen timeout and phrase time limit.")
+                        print(
+                            "Running snowboy with listen timeout and phrase time limit.")
                         sys.stdout.flush()
                         audio = self.r.listen(source, snowboy_configuration=self.snowboy_configuration,
-                                                 timeout=timeout, phrase_time_limit=phrase_time_limit)
+                                              timeout=timeout, phrase_time_limit=phrase_time_limit)
                     else:
-                        print("Running no hot word with listen timeout and phrase time limit.")
+                        print(
+                            "Running no hot word with listen timeout and phrase time limit.")
                         sys.stdout.flush()
-                        audio = self.r.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+                        audio = self.r.listen(
+                            source, timeout=timeout, phrase_time_limit=phrase_time_limit)
                 else:
                     if self.snowboy_configuration:
                         print("Running snowboy with phrase time limit.")
                         sys.stdout.flush()
                         audio = self.r.listen(source, snowboy_configuration=self.snowboy_configuration,
-                                                 phrase_time_limit=phrase_time_limit)
+                                              phrase_time_limit=phrase_time_limit)
                     else:
                         print("Running no hot word with phrase time limit.")
                         sys.stdout.flush()
-                        audio = self.r.listen(source, phrase_time_limit=phrase_time_limit)
+                        audio = self.r.listen(
+                            source, phrase_time_limit=phrase_time_limit)
             else:
                 if self.snowboy_configuration:
                     print("Running snowboy with no timeouts.")
                     sys.stdout.flush()
-                    audio = self.r.listen(source, snowboy_configuration=self.snowboy_configuration)
+                    audio = self.r.listen(
+                        source, snowboy_configuration=self.snowboy_configuration)
                 else:
                     print("Running no hot word with no timeouts.")
                     sys.stdout.flush()
@@ -110,7 +140,8 @@ class SpeechRecognizerServer:
             print("Time to collect phrase: %f" % (time.time() - t))
             sys.stdout.flush()
         except sr.WaitTimeoutError:
-            self.client.send_message("/phrase_error", "Phrase listening timed out.")
+            self.client.send_message(
+                "/phrase_error", "Phrase listening timed out.")
             return
         except Exception as e:
             self.client.send_message("/phrase_error", str(e))
@@ -132,16 +163,20 @@ class SpeechRecognizerServer:
             value = self.r.recognize_google(audio)
 
             # we need some special handling here to correctly print unicode characters to standard output
-            if str is bytes:  # this version of Python uses bytes for strings (Python 2)
+            # this version of Python uses bytes for strings (Python 2)
+            if str is bytes:
                 phrase = u"{}".format(value).encode("utf-8")
-            else:  # this version of Python uses unicode for strings (Python 3+)
+            # this version of Python uses unicode for strings (Python 3+)
+            else:
                 phrase = "{}".format(value)
 
-            self.client.send_message("/phrase", [filename, audio.sample_rate, phrase])
+            self.client.send_message(
+                "/phrase", [filename, audio.sample_rate, phrase])
             return
 
         except sr.UnknownValueError:
-            self.client.send_message("/speech_to_text_error", "Oops! Didn't catch that")
+            self.client.send_message(
+                "/speech_to_text_error", "Oops! Didn't catch that")
             return
         except sr.RequestError as e:
             self.client.send_message("/speech_to_text_error",
@@ -160,11 +195,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.snowboy_model_files:
-        args.snowboy_model_files = glob.glob("wakeword/resources/models/*.pmdl")
+        args.snowboy_model_files = glob.glob(
+            "wakeword/resources/models/*.pmdl")
 
     snowboy_configuration = None
     if args.hotword:
-        snowboy_configuration = (args.snowboy_dir, args.snowboy_model_files, None)
+        snowboy_configuration = (
+            args.snowboy_dir, args.snowboy_model_files, None)
 
     server = SpeechRecognizerServer(respeaker=args.respeaker, mic_index=args.mic_index,
                                     snowboy_configuration=snowboy_configuration)

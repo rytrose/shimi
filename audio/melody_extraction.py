@@ -17,7 +17,14 @@ from librosa.beat import tempo as estimate_tempo
 
 
 class MelodyExtraction:
+    """Runs and processes melody extraction from audio files."""
     def __init__(self, path, resource_path="/home/nvidia/shimi/audio"):
+        """Establishes resource paths and an audio file path to run melody extraction on.
+
+        Args:
+            path (str): The path to the audio file to process.
+            resource_path (str): The path to the root of the folder defining outputs and helper scripts.
+        """
         self.resource_path = resource_path
         self.path = path
         self.sound_data, self.sr = sf.read(self.path, always_2d=True)
@@ -37,7 +44,13 @@ class MelodyExtraction:
         self.melodia_timestamps = None
 
     def deep_learning_extraction(self, process=True):
+        """Runs CNN melody extraction model on Shimi, with optional processing.
+
+        Args:
+            process (bool): A flag determining whether or not post-processing should be applied.
+        """
         if not op.exists(op.join(self.resource_path, "cnn_outputs", "cnn_" + self.name + ".txt")):
+            # Tensorflow only runs with python3.5 on Shimi, so it must be run in new process
             command_string = "python3.5 " + op.join(self.deep_learning_path,
                                                     "VocalMelodyExtraction.py") + " --input_file " + self.abs_path + \
                              " -m " + self.deep_learning_model_path + " --output_file " + op.join(self.resource_path,
@@ -54,16 +67,22 @@ class MelodyExtraction:
                     break
 
         deep_learning_data = np.loadtxt(op.join(self.resource_path, "cnn_outputs", "cnn_" + self.name + ".txt"))
-        self.deep_learning_data = deep_learning_data[:, 1]
-        np.place(self.deep_learning_data, self.deep_learning_data <= 0, 0)
+        self.deep_learning_data = deep_learning_data[:, 1]  # Only take first channel
+        np.place(self.deep_learning_data, self.deep_learning_data <= 0, 0)  # Replace negative estimates with 0
         num_points = self.deep_learning_data.shape[0]
         self.deep_learning_timestamps = [(i / num_points) * self.length_seconds for i in range(num_points)]
+
         if process:
             self.deep_learning_data, self.deep_learning_timestamps, self.notes = self.process_data(
                 self.deep_learning_data,
                 self.deep_learning_timestamps)
 
     def melodia_extraction(self, process=True):
+        """Runs melodia melody extraction model on Shimi, with optional processing.
+
+        Args:
+            process (bool): A flag determining whether or not post-processing should be applied.
+        """
         if not op.exists(op.join("melodia_outputs", "melodia_" + self.name + ".p")):
             command_string = "exagear -- " + op.join(self.run_melodia_path,
                                                      "run_melodia.sh") + " " + self.abs_path + " " + self.name
@@ -81,13 +100,23 @@ class MelodyExtraction:
 
     def process_data(self, melody_data, timestamps, fix_octaves=True, smooth_false_negatives=True,
                      remove_false_positives=True, remove_spikes=True):
+        """Post-process output of melody extraction model to fix errors
+
+        Args:
+            melody_data (list): The time-frequency data to process.
+            timestamps (list): The timestamps for the time-frequency data.
+            fix_octaves (bool): A flag determining whether or not to try to fix octaves.
+            smooth_false_negatives (bool): A flag determining whether or not to fill in missing false negatives.
+            remove_false_positives (bool): A flag determining whether or not to remove false positives.
+            remove_spikes (bool): A flag determining whether or not to remove outlier points.
+        """
         data_len = len(melody_data)
         timestep = timestamps[1] - timestamps[0]
         np.place(melody_data, melody_data <= 0, 0)  # Replace no VAD with 0
         np.place(melody_data, melody_data < 70, 0)  # Remove unrealistic low frequencies
         np.place(melody_data, melody_data > 750, 0)  # Remove unrealistic high frequencies
 
-        data_without_zeros = []  # get all the non-zero values to use for interpolation later
+        data_without_zeros = []  # Get all the non-zero values to use for interpolation later
         timestamps_without_zeros = []
 
         for freq, timestamp in zip(melody_data, timestamps):
@@ -103,16 +132,16 @@ class MelodyExtraction:
             num_false_negatives = 0
             start_idx = 0
             end_idx = 0
-            while melody_data[start_idx] < 0:  # move to first vocalization
+            while melody_data[start_idx] < 0:  # Move to first vocalization
                 start_idx += 1
                 end_idx += 1
-            while start_idx < data_len:  # look for gaps in VAD that seem to be false negatives
+            while start_idx < data_len:  # Look for gaps in VAD that seem to be false negatives
                 while start_idx < data_len and melody_data[start_idx] > 0:
                     start_idx += 1
                     end_idx += 1
                 while end_idx < data_len and melody_data[end_idx] <= 0:  # current frequency is 0
                     end_idx += 1
-                if end_idx < data_len:  # current frequency is not 0
+                if end_idx < data_len:  # Current frequency is not 0
                     if timestamps[end_idx] - timestamps[start_idx] < vad_smoothing_delta:
                         num_false_negatives += 1
                         for t in range(start_idx, end_idx):
@@ -134,7 +163,7 @@ class MelodyExtraction:
             false_positves_delta = 4 * timestep
             start_idx = 0
             end_idx = 0
-            while start_idx < data_len:  # look for short detections that seem to be false positives
+            while start_idx < data_len:  # Look for short detections that seem to be false positives
                 while start_idx < data_len and melody_data[start_idx] <= 0:
                     start_idx += 1
                     end_idx += 1
@@ -159,7 +188,7 @@ class MelodyExtraction:
             end_idx = 0
             timestamps_to_interpolate = []
             indicies_to_interpolate = []
-            while start_idx < data_len:  # look at both sides (if possible) of a point to check for spike
+            while start_idx < data_len:  # Look at both sides (if possible) of a point to check for spike
                 while start_idx < data_len and melody_data[start_idx] <= 0:
                     start_idx += 1
                     end_idx += 1
@@ -232,7 +261,7 @@ class MelodyExtraction:
             notes_dropped = 0
             notes_raised = 0
 
-            for note in notes:  # do inter-note fixing first
+            for note in notes:  # Do inter-note fixing first
                 note_start = note['start']
                 note_end = note['end']
                 for i in range(note_start, note_end):
@@ -301,7 +330,7 @@ class MelodyExtraction:
         start_idx = 0
         end_idx = 0
 
-        while end_idx < data_len:  # create notes for reference
+        while end_idx < data_len:  # Create notes for reference
             while start_idx < data_len and melody_data[start_idx] <= 0:
                 start_idx += 1
                 end_idx += 1
@@ -319,6 +348,11 @@ class MelodyExtraction:
         return melody_data, timestamps, notes
 
     def process_comparison(self, extraction_type):
+        """Compares all combinations of post-processing on melody extraction data.
+
+        Args:
+            extraction_type (str): Either "cnn" or "melodia" determining the type of melody extraction model.
+        """
         if extraction_type == "melodia":
             self.melodia_extraction(process=False)
             data = self.melodia_data

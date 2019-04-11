@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from pypot.utils import StoppableThread
@@ -8,7 +9,18 @@ from utils.utils import denormalize_to_range, quantize
 
 
 class Jam(StoppableThread):
+    """General \"music appreciation\" movement for moving with audio."""
+
     def __init__(self, shimi, tempo, length, energy=None):
+        """Generates sequenced movements.
+
+        Args:
+            shimi (Shimi): An instance of the Shimi motor controller class.
+            tempo (float): Tempo of the audio file in seconds per beat.
+            length (float): Length of the audio file in seconds.
+            energy (float, optional): Defaults to None. A normalized measure of energy in the audio file.
+        """
+
         self.shimi = shimi
         self.tempo = tempo
         self.length = length
@@ -25,6 +37,7 @@ class Jam(StoppableThread):
                                  teardown=self.teardown)
 
     def run(self):
+        """Starts the gesture."""
         self.foot.start()
         self.torso.start()
         self.neck_ud.start()
@@ -36,6 +49,14 @@ class Jam(StoppableThread):
         self.neck_lr.join()
 
     def foot_move(self, energy):
+        """Moves the foot up and down according to the tempo and potentially energy of the audio file.
+
+        Args:
+            energy (float): A normalized measure of energy in the audio file.
+
+        Returns:
+            Move: A Thread of properly sequenced movements.
+        """
         foot_dir = True
 
         tap_period = self.tempo
@@ -44,7 +65,8 @@ class Jam(StoppableThread):
             quantized_energies = [0.2, 0.7, 1.0]
             quantized_energy = quantize(energy, quantized_energies)
             tap_periods = [self.tempo * 4, self.tempo * 2, self.tempo]
-            tap_period = tap_periods[quantized_energies.index(quantized_energy)]
+            tap_period = tap_periods[quantized_energies.index(
+                quantized_energy)]
 
         foot = Move(self.shimi, self.shimi.foot, 1.0, tap_period / 2)
 
@@ -62,6 +84,14 @@ class Jam(StoppableThread):
         return foot
 
     def torso_move(self, energy):
+        """Moves the torso forward and back according to the tempo and potentially energy of the audio file.
+
+        Args:
+            energy (float): A normalized measure of energy in the audio file.
+
+        Returns:
+            Move: A Thread of properly sequenced movements.
+        """
         torso_dir = True
 
         torso_period = self.tempo * 8
@@ -70,11 +100,13 @@ class Jam(StoppableThread):
             quantized_energies = [0.2, 0.7, 1.0]
             quantized_energy = quantize(energy, quantized_energies)
             torso_periods = [self.tempo * 8, self.tempo * 6, self.tempo * 4]
-            torso_period = torso_periods[quantized_energies.index(quantized_energy)]
+            torso_period = torso_periods[quantized_energies.index(
+                quantized_energy)]
 
-        randomness = 0.1 * random.random() * random.choice([-1 , 1])
+        randomness = 0.1 * random.random() * random.choice([-1, 1])
 
-        torso = Move(self.shimi, self.shimi.torso, 0.7 + randomness, torso_period / 2, vel_algo='linear_ad')
+        torso = Move(self.shimi, self.shimi.torso, 0.7
+                     + randomness, torso_period / 2, vel_algo='linear_ad')
 
         t = torso_period / 2
 
@@ -91,6 +123,14 @@ class Jam(StoppableThread):
         return torso
 
     def neck_ud_move(self, energy):
+        """Moves the neck up and down according to the tempo and potentially energy of the audio file.
+
+        Args:
+            energy (float): A normalized measure of energy in the audio file.
+
+        Returns:
+            Move: A Thread of properly sequenced movements.
+        """
         num_move = 3
         num_dont_move = 2
 
@@ -100,7 +140,8 @@ class Jam(StoppableThread):
             num_moves = [1, 2, 3]
             num_dont_moves = [4, 3, 2]
             num_move = num_moves[quantized_energies.index(quantized_energy)]
-            num_dont_move = num_dont_moves[quantized_energies.index(quantized_energy)]
+            num_dont_move = num_dont_moves[quantized_energies.index(
+                quantized_energy)]
 
         neck_ud_dir = True
         neck_ud = Move(self.shimi, self.shimi.neck_ud, 0.2, self.tempo / 2)
@@ -109,7 +150,8 @@ class Jam(StoppableThread):
         delay = 0.0
 
         while t < self.length:
-            should_move = random.choice([True for _ in range(num_move)] + [False for _ in range(num_dont_move)])
+            should_move = random.choice([True for _ in range(
+                num_move)] + [False for _ in range(num_dont_move)])
             if should_move:
                 if neck_ud_dir:
                     neck_ud.add_move(0.9, self.tempo / 2, delay=delay)
@@ -125,7 +167,15 @@ class Jam(StoppableThread):
         return neck_ud
 
     def neck_lr_move(self, energy):
-        delay_max = 3
+        """Moves the neck left and right according to the tempo and potentially energy of the audio file.
+
+        Args:
+            energy (float): A normalized measure of energy in the audio file.
+
+        Returns:
+            Move: A Thread of properly sequenced movements.
+        """
+        delay_max = 3  # Maximum delay in seconds
 
         if energy is not None:
             quantized_energies = [0.2, 0.7, 1.0]
@@ -134,7 +184,8 @@ class Jam(StoppableThread):
             delay_max = delay_maxes[quantized_energies.index(quantized_energy)]
 
         t = 0.5 + random.random()
-        neck_lr = Move(self.shimi, self.shimi.neck_lr, 0.5, t, vel_algo='linear_ad')
+        neck_lr = Move(self.shimi, self.shimi.neck_lr,
+                       0.5, t, vel_algo='linear_ad')
 
         delay = 0.0
         prev_pos = 0.5
@@ -148,4 +199,3 @@ class Jam(StoppableThread):
             t += delay + dur
 
         return neck_lr
-

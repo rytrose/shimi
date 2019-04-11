@@ -11,6 +11,22 @@ INTERP_FREQ = 0.01
 
 def playback(shimi, motors, duration, timestamps, pos_matrix, vel_matrix, pos_ax=None, vel_ax=None,
              use_pos_spl=True, use_vel_spl=False, callback=None):
+    """Actuates motors based on input positions and velocities.
+    
+    Args:
+        shimi (Shimi): An instance of the Shimi motor controller class.
+        motors (List[int]): Motors IDs on which to playback the recorded gesture.
+        duration (float): Length of the playback in seconds.
+        timestamps (List[float]): The timestamps of the position and velocity data.
+        pos_matrix (List[List[float]]): The position data for each motor.
+        vel_matrix (List[List[float]]): The velocity data for each motor.
+        pos_ax (matplotlib.pyplot.axis, optional): Defaults to None. An axis to plot position data on through pyplot.
+        vel_ax (matplotlib.pyplot.axis, optional): Defaults to None. An axis to plot velocity data on through pyplot.
+        use_pos_spl (bool, optional): Defaults to True. Determines whether to us univariate spline smoothing on position data.
+        use_vel_spl (bool, optional): Defaults to False. Determines whether to us univariate spline smoothing on velocity data.
+        callback (function, optional): Defaults to None. A function called when movement starts.
+    """
+
     # Ensure all inputs are np arrays
     if not isinstance(timestamps, np.ndarray):
         timestamps = np.array(timestamps)

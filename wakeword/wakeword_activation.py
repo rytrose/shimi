@@ -10,14 +10,7 @@ import random
 import wakeword.snowboydecoder as snowboydecoder
 
 
-def generate_phrase(shimi, phrase, path):
-    rand_valence = random.choice([-1, 1]) * random.random()
-    rand_arousal = random.choice([-1, 1]) * random.random()
-    print("VALENCE: %.4f, AROUSAL: %.4f" % (rand_valence, rand_arousal))
-    phrase_generator.generate(path, rand_valence, rand_arousal)
-
-
-# N.B. All callbacks should take one argument, an instance of Shimi
+# N.B. All callbacks should take one argument, an instance of Shimi, and accept arbitrary keyword arguments
 PHRASE_CALLBACKS = [
     {
         "triggers": ["play opera", "sing opera"],
@@ -27,24 +20,29 @@ PHRASE_CALLBACKS = [
 
 
 class WakeWordClient:
+    """Provides interface for the wakeword detection process."""
+
     def __init__(self, shimi=None, models=["wakeword/resources/models/Hey-Shimi-Ryan1.pmdl"],
                  phrase_callbacks=PHRASE_CALLBACKS,
                  default_callback=None,
                  on_wake=None, on_phrase=None, on_phrase_heard=None,
                  respeaker=False, posenet=False, manual_wake=False):
-        """
-        Defines a threaded process to manage using the "hey Shimi" wakeword, and making appropriate callbacks.
-        :param on_wake: a non-blocking function or StoppableThread to be called when the wakeword is heard
-        :param on_phrase: a function to be called when a phrase is gathered after the wakeword
-        :param respeaker: if True, will look for the ReSpeaker microphone
+        """Intializes callbacks and starts wakeword process.
+            shimi (Shimi, optional): An instance of the Shimi motor controller class.
+            models (list, optional): Defaults to ["wakeword/resources/models/Hey-Shimi-Ryan1.pmdl"]. List of paths to wakeword model files.
+            phrase_callbacks (dict, optional): Defaults to PHRASE_CALLBACKS. A dict of objects containing an array of trigger words and a callback function to run on trigger word detection.
+            default_callback (function, optional): Defaults to None. A function to call if no trigger word is found.
+            on_wake (function, optional): Defaults to None. A function to call when the wake word is heard.
+            on_phrase (function, optional): Defaults to None. A function to call when a phrase has been processed into text.
+            on_phrase_heard (function, optional): Defaults to None. A function to call when a phrase has been heard, but before it has been processed.
+            respeaker (bool, optional): Defaults to False. Determines whether to look for the ReSpeaker microphone inside of Shimi.
+            posenet (bool, optional): Defaults to False. Determines whether or not to start the PoseNet process.
+            manual_wake (bool, optional): Defaults to False. Determines whether to bypass microphone input and wake Shimi with just keyboard input.
         """
         if shimi is not None:
             self.shimi = shimi
         else:
             self.shimi = Shimi()
-
-        global phrase_generator
-        phrase_generator = GenerativePhrase(shimi=shimi, posenet=posenet)
 
         self.on_wake = on_wake
         self.on_wake_is_thread = self.is_thread(self.on_wake)
@@ -67,6 +65,7 @@ class WakeWordClient:
                                                                        'wakeword', models, self.on_wake_wrapper))
 
     def run(self):
+        """Runs the speech recognition client, or prompts for keyboard input."""
         if self.manual_wake:
             print("Press enter to wake Shimi.")
             input()
@@ -76,6 +75,7 @@ class WakeWordClient:
         self.speech_recognizer_client.listen()
 
     def on_wake_wrapper(self):
+        """Wraps on_wake function, allowing StoppableThread objects to be used as on_wake."""
         # Call wake function if it exists
         # Handle thread
         if self.on_wake:
@@ -86,6 +86,7 @@ class WakeWordClient:
                 self.on_wake(self.shimi)
 
     def on_phrase_heard_wrapper(self):
+        """Wraps on_phrase_heard function, allowing StoppableThread objects to be used as on_phrase_heard."""
         if self.on_phrase_heard:
             self.on_phrase_heard()
 
@@ -93,6 +94,15 @@ class WakeWordClient:
             self.stop_on_wake_thread()
 
     def on_phrase_wrapper(self, audio_data, sample_rate, phrase):
+        """Wraps on_phrase function, allowing allowing StoppableThread objects to be used as on_phrase.
+
+        Also receives and passes along input audio data.
+        
+        Args:
+            audio_data (list): Raw PCM input audio data.
+            sample_rate (int): Sample rate of recorded input audio.
+            phrase (str): Text transcription of audio input.
+        """
         # Make phrase lowercase
         phrase = phrase.lower()
 
@@ -133,7 +143,8 @@ class WakeWordClient:
                         break
 
             if not found_callback:
-                print("Heard \"%s\", but didn't have any function to pass it to. Calling default." % phrase)
+                print(
+                    "Heard \"%s\", but didn't have any function to pass it to. Calling default." % phrase)
                 if not self.default_callback:
                     print("No default callback.")
                 else:
@@ -156,6 +167,7 @@ class WakeWordClient:
         self.speech_recognizer_client.listen()
 
     def stop_on_wake_thread(self):
+        """Stops the on_wake_thread StoppableThread."""
         # Stop thread
         self.on_wake_thread.stop()
 
@@ -164,6 +176,7 @@ class WakeWordClient:
             self.on_wake_thread.join()
 
     def is_thread(self, obj):
+        """Helper to check if an object is a StoppableThread."""
         try:
             if "StoppableThread" in [cls.__name__ for cls in inspect.getmro(obj)]:
                 return True
@@ -171,147 +184,3 @@ class WakeWordClient:
                 return False
         except:
             return False
-
-
-class WakeWord:
-    def __init__(self, shimi=None, models=["wakeword/resources/models/Hey-Shimi-Ryan1.pmdl"],
-                 phrase_callbacks=PHRASE_CALLBACKS,
-                 default_callback=None,
-                 on_wake=None, on_phrase=None,
-                 respeaker=False, posenet=False, use_doa=False, manual_wake=False):
-        """
-        Defines a threaded process to manage using the "hey Shimi" wakeword, and making appropriate callbacks.
-        :param on_wake: a non-blocking function or StoppableThread to be called when the wakeword is heard
-        :param on_phrase: a function to be called when a phrase is gathered after the wakeword
-        :param respeaker: if True, will look for the ReSpeaker microphone
-        """
-        if shimi is not None:
-            self.shimi = shimi
-        else:
-            self.shimi = Shimi()
-
-        global phrase_generator
-        phrase_generator = GenerativePhrase(shimi=shimi, posenet=posenet)
-
-        self.on_wake = on_wake
-        self.on_wake_is_thread = self.is_thread(self.on_wake)
-        self.on_phrase = on_phrase
-        self.respeaker = respeaker
-        self.use_doa = use_doa
-        self.phrase_callbacks = phrase_callbacks
-        self.default_callback = default_callback
-        self.manual_wake = manual_wake
-        if self.manual_wake:
-            self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker)
-        else:
-            self.speech_recognizer = SpeechRecognizer(respeaker=self.respeaker,
-                                                      snowboy_configuration=('wakeword', models, self.on_wake_word),
-                                                      google_cloud=False,
-                                                      sphinx=False)
-
-        self.setup()
-
-    def setup(self):
-        print("Please be quiet for microphone calibration...")
-        self.speech_recognizer.calibrate()
-        print("...finished calibrating.")
-
-    def run(self):
-        while True:
-            if self.manual_wake:
-                print("Press enter to wake Shimi.")
-                input()
-                self.on_wake_word()
-
-            if self.on_wake_is_thread:
-                phrase, audio_data, doa_value = self.speech_recognizer.listenForPhrase(phrase_time_limit=5,
-                                                                                       on_phrase=self.stop_on_wake_thread,
-                                                                                       use_doa=self.use_doa)
-            else:
-                # Start to listen for a phrase
-                phrase, audio_data, doa_value = self.speech_recognizer.listenForPhrase(phrase_time_limit=5,
-                                                                                       use_doa=self.use_doa)
-
-            # TODO: Handle no phrase
-            if phrase is None:
-                continue
-
-            # Make phrase lowercase
-            phrase = phrase.lower()
-
-            # Check words
-            split = phrase.split(" ")
-            if split[0] == "hey":
-                # Get rid of key word "Hey Shimi"
-                phrase = " ".join(phrase.split(" ")[2:])
-
-            print("Phrase said: %s" % phrase)
-
-            # Pass the phrase to callback
-            if self.on_phrase:
-                t = time.time()
-                self.on_phrase(self.shimi, phrase, audio_data, doa_value)
-                print("Time for phrase processing call [e.g. dialogue()]: %f" % (time.time() - t))
-            else:
-                # Check callbacks for trigger words
-                found_callback = False
-                for phrase_callback in self.phrase_callbacks:
-                    for trigger in phrase_callback["triggers"]:
-                        if trigger in phrase:
-                            found_callback = True
-                            print("Calling:", phrase_callback["callback"])
-                            try:
-                                if self.is_thread(phrase_callback["callback"]):
-                                    phrase_callback["callback"](self.shimi, phrase=phrase,
-                                                                audio_data=audio_data).start()
-                                else:
-                                    # HACK FOR DEMO
-                                    if "args" in phrase_callback:
-                                        phrase_callback["callback"](self.shimi, *phrase_callback["args"], phrase=phrase,
-                                                                    audio_data=audio_data)
-                                    else:
-                                        phrase_callback["callback"](self.shimi, phrase=phrase, audio_data=audio_data)
-                            except Exception as e:
-                                print("Callback failed:", e)
-                                break
-
-                            # Only call the first trigger
-                            break
-
-                if not found_callback:
-                    print("Heard \"%s\", but didn't have any function to pass it to. Calling default." % phrase)
-                    if not self.default_callback:
-                        print("No default callback.")
-                    else:
-                        try:
-                            default_callback["callback"](self.shimi, phrase, *default_callback["args"])
-                        except Exception as e:
-                            print("Default callback failed.", e)
-
-    def stop_on_wake_thread(self):
-        # Stop thread
-        self.on_wake_thread.stop()
-
-        # Wait for it to be done if it isn't
-        if self.on_wake_thread._thread.is_alive():
-            self.on_wake_thread.join()
-
-    def on_wake_word(self):
-        # Call wake function if it exists
-        # Handle thread
-        if self.on_wake:
-            if self.on_wake_is_thread:
-                self.on_wake_thread = self.on_wake(self.shimi)
-                self.on_wake_thread.start()
-            else:
-                self.on_wake(self.shimi)
-
-    def is_thread(self, obj):
-        try:
-            if "StoppableThread" in [cls.__name__ for cls in inspect.getmro(obj)]:
-                return True
-            else:
-                return False
-        except:
-            return False
-

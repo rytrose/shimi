@@ -11,7 +11,9 @@ import threading
 
 
 class DOA:
+    """Gets approximate direction of arrival value from the microphone."""
     def __init__(self):
+        """Finds microphone and initializes libraries."""
         self.usb_device = usb.core.find(idVendor=0x2886, idProduct=0x0018)
 
         if self.usb_device:
@@ -28,6 +30,7 @@ class DOA:
         self.thread.start()
 
     def run_doa(self):
+        """Continuously checks and returns DOA value."""
         while self.run:
             raw_doa = self.mic_tuning.direction
             if raw_doa > 120:

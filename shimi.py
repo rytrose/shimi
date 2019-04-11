@@ -6,38 +6,41 @@ import pypot.dynamixel
 import time
 from pprint import pprint
 
+
 class Shimi:
-    # Constructor
+    """Abstraction around Shimi's motor controller."""
+
     def __init__(self, silent=False):
+        """Sets up motor controller and sets Shimi to initial position.
+            silent (bool, optional): Defaults to False. Suppresses print information on motor connections.
+        """
         try:
             # Setup serial connection to motors and get the controller
             self.controller = self.setup(silent)
-
-            # Set motors to initial positions
-            self.initial_position()
+            self.initial_position()  # Set motors to initial positions
         except Exception as e:
             self.controller = None
             print("WARNING, MOTOR ERROR.", e)
 
-
-    # Establishes serial connection to motors
     def setup(self, silent):
-        # Find USB to serial converter
-        ports = pypot.dynamixel.get_available_ports()
+        """Establishes serial connection to Shimi's motors.
 
-        # Connect to first port for now
+        Args:
+            silent (bool): Suppresses print information on motor connections.
+
+        Returns:
+            pypot.dynamixel.DxlIO: The motor controller connected to Shimi's motors.
+        """
+        ports = pypot.dynamixel.get_available_ports()  # Find USB to serial converter
         if not silent:
             print('Connecting on', ports[0])
-        controller = pypot.dynamixel.DxlIO(ports[0])
 
-        # Search for motors
-        ids = controller.scan(range(10))
+        # Connect to first port by default
+        controller = pypot.dynamixel.DxlIO(ports[0])
+        ids = controller.scan(range(10))  # Search for motors with ids 0-9
 
         if not silent:
             print('Found motors with the following IDs:', ids)
-
-            # Current settings for found motors
-            # pprint(controller.get_control_table(ids))
 
         return controller
 
@@ -65,15 +68,17 @@ class Shimi:
     def all_motors(self):
         return [TORSO, NECK_UD, NECK_LR, PHONE, FOOT]
 
-    # Moves the motors to the initial position set in config/definitions
     def initial_position(self, duration=1.0):
-        # Make sure torque is enabled
-        self.enable_torque()
+        """Moves Shimi's motors to the initial position set in config/definitions.
 
-        # self.robot.goto_position({m.name: STARTING_POSITIONS[m.id] for m in self.robot.motors}, 1.0, wait=True)
+        Args:
+            duration (float, optional): Defaults to 1.0. Time to take Shimi's motors to their initial positions.
+        """
+        self.enable_torque()  # Make sure torque is enabled
         moves = []
         for m in self.all_motors:
-            move = Move(self, m, STARTING_POSITIONS[m], duration, normalized_positions=False)
+            move = Move(
+                self, m, STARTING_POSITIONS[m], duration, normalized_positions=False)
             moves.append(move)
 
         # Start all the moves
@@ -84,13 +89,10 @@ class Shimi:
         for move in moves:
             move.join()
 
-    # Turns off torque so they can be moved by hand
     def disable_torque(self):
-        # Disable torque for all motors
+        """Turns off torque for Shimi's motors so they can be moved by hand."""
         self.controller.disable_torque(self.all_motors)
 
-    # Turns on torque, making the motors rigid
     def enable_torque(self):
-        # Enable torque for all motors
+        """Turns on torque for Shimi's motors so they can be moved programmatically and are rigid."""
         self.controller.enable_torque(self.all_motors)
-

@@ -18,10 +18,17 @@ INTERP_FREQ = 0.1
 
 class PoseNet:
     def __init__(self, shimi, on_pred=None):
+        """Starts the PoseNet process.
+        
+        Args:
+            shimi (Shimi): An instance of the Shimi motor controller class.
+            on_pred (function, optional): Defaults to None. A function to be called when a prediction is made.
+        """
         try:
             subprocess.check_output(['ls', '/usr/bin/python3.5'])
         except:
-            print("Python 3.5 unavailable, likely unavailable to use Tensorflow, returning None.")
+            print(
+                "Python 3.5 unavailable, likely unavailable to use Tensorflow, returning None.")
             self.valid = False
             return
 
@@ -55,16 +62,29 @@ class PoseNet:
         # Listen for messages from PoseNet
         dispatcher.map('/predictions', self.posenet_receiver)
 
-        server = osc_server.ThreadingOSCUDPServer(("localhost", 8000), dispatcher)
+        server = osc_server.ThreadingOSCUDPServer(
+            ("localhost", 8000), dispatcher)
         server_thread = threading.Thread(target=server.serve_forever)
         server_thread.daemon = True
         server_thread.start()
-        print("Listening for OSC at {0} on port {1}".format(server.server_address[0], server.server_address[1]))
+        print("Listening for OSC at {0} on port {1}".format(
+            server.server_address[0], server.server_address[1]))
 
         self.posenet = None
         self.start_posenet()
 
     def posenet_receiver(self, _, pose_string, fps):
+        """Receives PoseNet prediction values over OSC.
+        
+        Args:
+            _ (str): OSC address, unused.
+            pose_string (str): JSON string prediction data from PoseNet.
+            fps (float): Current average FPS of prediction.
+        
+        Returns:
+            [type]: [description]
+        """
+
         pose = json.loads(pose_string)
 
         if self.receiving_from_posenet == False:
@@ -85,22 +105,29 @@ class PoseNet:
 
             for point in points:
                 if point['part'] == 'leftEar':
-                    left_ear = Point(point['position']['x'], point['position']['y'], point['score'])
+                    left_ear = Point(
+                        point['position']['x'], point['position']['y'], point['score'])
                 if point['part'] == 'rightEar':
-                    right_ear = Point(point['position']['x'], point['position']['y'], point['score'])
+                    right_ear = Point(
+                        point['position']['x'], point['position']['y'], point['score'])
                 if point['part'] == 'nose':
-                    nose = Point(point['position']['x'], point['position']['y'], point['score'])
+                    nose = Point(point['position']['x'],
+                                 point['position']['y'], point['score'])
                 if point['part'] == 'leftEye':
-                    left_eye = Point(point['position']['x'], point['position']['y'], point['score'])
+                    left_eye = Point(
+                        point['position']['x'], point['position']['y'], point['score'])
                 if point['part'] == 'rightEye':
-                    right_eye = Point(point['position']['x'], point['position']['y'], point['score'])
+                    right_eye = Point(
+                        point['position']['x'], point['position']['y'], point['score'])
 
             #############
             # NECK_UD
             #############
             # Use eye line as reference point for nose
-            eye_midpoint = Point((right_eye.x + left_eye.x) / 2.0, (right_eye.y + left_eye.y) / 2.0)
-            eye_to_nose_dist = math.sqrt(math.pow(nose.x - eye_midpoint.x, 2) + math.pow(nose.y - eye_midpoint.y, 2))
+            eye_midpoint = Point((right_eye.x + left_eye.x) /
+                                 2.0, (right_eye.y + left_eye.y) / 2.0)
+            eye_to_nose_dist = math.sqrt(
+                math.pow(nose.x - eye_midpoint.x, 2) + math.pow(nose.y - eye_midpoint.y, 2))
 
             NECK_UD_HEURISTIC = 100.0
 
@@ -119,7 +146,8 @@ class PoseNet:
             # TORSO
             ###########
             # Use the area of eye-nose-ear triangles to gauge bending, smaller --> more upright
-            triangle_area = lambda a, b, c: abs((a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y)) / 2)
+            def triangle_area(a, b, c): return abs(
+                (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y)) / 2)
 
             left_area = triangle_area(left_eye, left_ear, nose)
             right_area = triangle_area(right_eye, right_ear, nose)
@@ -131,7 +159,8 @@ class PoseNet:
             TORSO_HEURISTIC_DOWN = 50000.0
 
             # Normalize area between heuristics
-            normalize_torso = lambda t: (t - TORSO_HEURISTIC_UP) / (TORSO_HEURISTIC_DOWN - TORSO_HEURISTIC_UP)
+            def normalize_torso(t): return (
+                t - TORSO_HEURISTIC_UP) / (TORSO_HEURISTIC_DOWN - TORSO_HEURISTIC_UP)
             torso = normalize_torso(area)
 
             # Keep in range 0.0 - 1.0
@@ -152,11 +181,12 @@ class PoseNet:
             NECK_LR_R_HEURISTIC_RIGHT = 10.0
 
             # Normalizes to 0.0 - 0.5
-            normalize_neck_left = lambda t: (t - NECK_LR_L_HEURISTIC_LEFT) / (
-                    NECK_LR_L_HEURISTIC_MIDDLE - NECK_LR_L_HEURISTIC_LEFT) / 2
+            def normalize_neck_left(t): return (t - NECK_LR_L_HEURISTIC_LEFT) / (
+                NECK_LR_L_HEURISTIC_MIDDLE - NECK_LR_L_HEURISTIC_LEFT) / 2
 
             # Normalizes to 0.5 - 1.0
-            normalize_neck_right = lambda t: 0.5 + (1.0 - math.pow(0.3, t / NECK_LR_R_HEURISTIC_RIGHT))
+            def normalize_neck_right(
+                t): return 0.5 + (1.0 - math.pow(0.3, t / NECK_LR_R_HEURISTIC_RIGHT))
 
             # Use the ratio of eye-nose-ear triangle areas to determine left right
             ratio = left_area / right_area
@@ -183,10 +213,15 @@ class PoseNet:
                     self.positions.append(pos)
                 else:
                     # Stop recording by setting record parameters to None
-                    print("Done. Recorded {0} positions.".format(len(self.positions)))
+                    print("Done. Recorded {0} positions.".format(
+                        len(self.positions)))
                     self.recording_start = None
 
     def record(self, duration=5.0, wait=3.0):
+        """Records the Shimi motor positions taken from PoseNet detection.
+            duration (float, optional): Defaults to 5.0. Time in seconds to record.
+            wait (float, optional): Defaults to 3.0. Time to wait from when this function is called to when recording starts.
+        """
         # Erase previous recording if any
         self.positions = []
 
@@ -199,6 +234,10 @@ class PoseNet:
         self.recording_start = time.time()
 
     def play(self, pos_ax=None, vel_ax=None):
+        """Plays recorded Shimi movements.
+            pos_ax (matplotlib.pyplot.axis, optional): Defaults to None. An axis to plot position data on through pyplot.
+            vel_ax (matplotlib.pyplot.axis, optional): Defaults to None. An axis to plot velocity data on through pyplot.
+        """
         # If there was nothing recorded, return
         if len(self.positions) == 0:
             print("No recording to play.")
@@ -213,15 +252,18 @@ class PoseNet:
                 pos_matrix[i, j] = denormalize_position(m, pos_matrix[i, j])
 
         # Playback
-        playback(self.shimi, self.motors, self.recording_duration, self.timestamps, pos_matrix, None, pos_ax, vel_ax)
+        playback(self.shimi, self.motors, self.recording_duration,
+                 self.timestamps, pos_matrix, None, pos_ax, vel_ax)
 
     def start_posenet(self):
+        """Starts the PoseNet subprocess."""
         print("Starting PoseNet...")
         self.posenet = subprocess.Popen(
             "/usr/bin/python3.5 posenet/posenet_python/posenet_model_python.py --path posenet/posenet_python --ip 127.0.0.1 --port 8000",
             shell=True)
 
     def stop_posenet(self):
+        """Stops the PoseNet subprocess."""
         if (self.posenet):
             print("Stopping PoseNet...")
             self.receiving_from_posenet = False

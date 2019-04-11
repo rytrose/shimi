@@ -10,12 +10,21 @@ import pyaudio
 import wave
 
 def get_wave(fname):
+    """Returns base64 encoding of a specified file."""
     with open(fname, "rb") as infile:
         infile_bytes = infile.read()
         return base64.b64encode(infile_bytes).decode("utf-8")
 
 
 def train_wakeword(age_group, gender, out):
+    """Trains a model for the Snowboy wakeword engine.
+    
+    Args:
+        age_group (str): Represents the age group of the speaker. Value should be in ["0_9", "10_19", "20_29", "30_39", "40_49", "50_59", "60+"].
+        gender (str): Represents the gender of the speaker. Value should be in ["M", "F"].
+        out (str): Filename at which to save the generated model.
+    """
+
     audio = pyaudio.PyAudio()
 
     fs = 16000
@@ -61,6 +70,12 @@ def train_wakeword(age_group, gender, out):
     audio.terminate()
 
 def record_pyaudio(audio, name):
+    """Records from Shimi's microphone.
+    
+    Args:
+        audio (pyaudio.PyAudio): Instance of PyAudio object, interface to recording device.
+        name (str): Filename at which to save the recording.
+    """
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
     RATE = 16000

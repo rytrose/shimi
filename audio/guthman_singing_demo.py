@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from PyInquirer import prompt
@@ -42,10 +43,12 @@ song_info = {}
 
 
 def make_song_options():
+    """Fetches the information and fills out a list of songs capable of being demoed."""
     conn = sqlite3.connect('/media/nvidia/disk3/shimi_library.db')
     c = conn.cursor()
     for msd_id in available_ids:
-        c.execute("select title, artist_name, release from songs where msd_id=?", [msd_id])
+        c.execute(
+            "select title, artist_name, release from songs where msd_id=?", [msd_id])
         song = c.fetchone()
         song_info[msd_id] = {}
         song_info[msd_id]['title'] = song[0]
@@ -59,6 +62,7 @@ def make_song_options():
 
 
 def get_song_info():
+    """Loads or fetches information about demo songs from Spotify API."""
     global song_info, choices
     if op.exists("song_info.p"):
         make_song_options()
@@ -73,7 +77,8 @@ def get_song_info():
             song_filename = op.join(AUDIO_PATH, "%s.wav" % msd_id)
             y, sr = load(song_filename)
             song_info[msd_id]['length'] = y.shape[0] / sr
-            song_info[msd_id]['librosa_tempo'] = 60 / float(estimate_tempo(y, sr))
+            song_info[msd_id]['librosa_tempo'] = 60 / \
+                float(estimate_tempo(y, sr))
 
             if not 'danceability' in song_info[msd_id].keys():
                 search = spotify_client.search(song_info[msd_id]['title'])
@@ -117,6 +122,7 @@ if __name__ == '__main__':
 
     while True:
         try:
+            # Get rid of all the audio printing to have cleaner console for demo selection
             os.system('clear')
             chosen = prompt([{
                 'type': 'list',

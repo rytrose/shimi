@@ -14,24 +14,23 @@ class Move(StoppableThread):
                  freq=0.1,
                  stop_check_freq=0.005,
                  normalized_positions=True):
-        """
-        A threaded process in charge of moving a motor of Shimi over time.
-        :param shimi: provides access to the motor controller
-        :param motor: which motor to move
-        :param position: position to moved to (in normalized position from 0-1 w.r.t. Shimi's range, or degrees if
-            normalized_positions is set to False
-        :param duration: duration the move should take to reach the position
-        :param vel_algo: a key defining the velocity algorithm to use for the move, out of the following:
-            'constant: constant velocity,
-            'linear_ad': constant acceleration to the midpoint of the movement, then constant deceleration to the end,
-            'linear_a': constant acceleration to a point, then constant velocity for the rest of the movement,
-            'linear_d': constant velocity to a point, thes constant aceleration for the rest of the movement
-        :param vel_algo_kwarg: keyword arguments if needed for a velocity algorithm
-        :param initial_delay: time to wait before starting the move when the thread is started
-        :param stop_check_freq: for velocity algorithms that are purely constant, how often to check for a stop flag
-        :param normalized_positions: if True, position will be interpreted as a value from 0-1 where 0 is one limit to
-            the motor's range and 1 is the other
-            if False, position is interpreted as degrees
+        """A threaded process in charge of moving a motor of Shimi over time.
+
+        Args:
+            shimi (Shimi): An instance of the Shimi motor controller class.
+            motor (int): The motor ID to generate random movements for.
+            position (float): The position to move to.
+            duration (float): The duration the movement should last.
+            vel_algo (str, optional): Defaults to 'constant'. Defines the velocity algorithm to use for the move, out of the following:
+                'constant: constant velocity,
+                'linear_ad': constant acceleration to the midpoint of the movement, then constant deceleration to the end,
+                'linear_a': constant acceleration to a point, then constant velocity for the rest of the movement,
+                'linear_d': constant velocity to a point, then constant aceleration for the rest of the movement.
+            vel_algo_kwarg (dict, optional): Defaults to {}. Keyword arguments if needed for a velocity algorithm.
+            initial_delay (float, optional): Defaults to 0.0. The time to wait before starting the move when the thread is started.
+            freq (float, optional): Defaults to 0.1. The interval time in seconds a new velocity value should be sent to the motors.
+            stop_check_freq (float, optional): Defaults to 0.005. The time in seconds of how often the StoppableThread should check if it should be stopped.
+            normalized_positions (bool, optional): Defaults to True. Determines whether pos should be interpeted as a value [0.0, 1.0] or as an angle in degrees.
         """
         self.shimi = shimi
         self.motor = motor
@@ -67,14 +66,11 @@ class Move(StoppableThread):
                                  teardown=self.teardown)
 
     def constant_vel(self, **kwargs):
-        """
-        Executes the move with constant velocity.
-        :param kwargs: not used
-        :return:
-        """
+        """Executes a Move with constant velocity."""
         start_time = time.time()
 
-        starting_position = self.shimi.controller.get_present_position([self.motor])[0]
+        starting_position = self.shimi.controller.get_present_position([self.motor])[
+            0]
 
         # Convert normalized position to degrees
         if self.norm:
@@ -102,12 +98,10 @@ class Move(StoppableThread):
             self.stop_move()
 
     def linear_accel_decel_vel(self, **kwargs):
-        """
-        Executes the move with constant acceleration to the midpoint of the move, then constant deceleration until
-            the end of the move.
-        :param kwargs:
-            min_vel: the minimum velocity allowed, i.e. starting/ending offset
-        :return:
+        """Executes the move with constant acceleration to the midpoint of the move, then constant deceleration until the end of the move.
+
+        Args:
+            kwargs["min_vel"] (float): The minimum velocity allowed, i.e. the start/end velocity offset.
         """
         start_time = time.time()
 
@@ -115,7 +109,8 @@ class Move(StoppableThread):
         if "min_vel" in kwargs:
             min_vel = kwargs["min_vel"]
 
-        starting_position = self.shimi.controller.get_present_position([self.motor])[0]
+        starting_position = self.shimi.controller.get_present_position([self.motor])[
+            0]
 
         # Convert normalized position to degrees
         if self.norm:
@@ -123,7 +118,7 @@ class Move(StoppableThread):
 
         # Compute maximum velocity, will hit at position / 2
         max_vel = 2 * (
-                (abs((self.pos - starting_position) / 2) - (min_vel * (self.dur / 2))) / (
+            (abs((self.pos - starting_position) / 2) - (min_vel * (self.dur / 2))) / (
                 (self.dur / 2) ** 2))
 
         # Set the goal position and initial speed of min_vel
@@ -160,12 +155,10 @@ class Move(StoppableThread):
             self.stop_move()
 
     def linear_accel_vel(self, **kwargs):
-        """
-        Executes the move with constant acceleration over time until a point in the duration, then remains at a
-            constant velocity for the rest of the move.
-        :param kwargs:
-            change_time: a value from 0-1 representing the portion of the move to accelerate for
-        :return:
+        """Executes the move with constant acceleration over time until a point in the duration, then remains at a constant velocity for the rest of the move.
+
+        Args:
+            kwargs["change_time"] (float): A normalized value [0.0, 1.0] representing the portion of the move to accelerate for.
         """
         start_time = time.time()
 
@@ -178,7 +171,8 @@ class Move(StoppableThread):
             self.pos = utils.denormalize_position(self.motor, self.pos)
 
         # Calculate the max velocity
-        current_pos = self.shimi.controller.get_present_position([self.motor])[0]
+        current_pos = self.shimi.controller.get_present_position([self.motor])[
+            0]
         max_vel = abs(current_pos - self.pos) / (change_time * self.dur)
 
         # Set the goal position
@@ -224,12 +218,10 @@ class Move(StoppableThread):
             self.stop_move()
 
     def linear_decel_vel(self, **kwargs):
-        """
-        Executes the move with constant velocity over time until a point in the duration, then decelerates at
-            constant deceleration for the rest of the move.
-        :param kwargs:
-            change_time: a value from 0-1 representing the portion of the move at constant velocity
-        :return:
+        """Executes the move with constant acceleration over time until a point in the duration, then remains at a constant velocity for the rest of the move.
+
+        Args:
+            kwargs["change_time"] (float): A normalized value [0.0, 1.0] representing the portion of the move to move at constant velocity.
         """
         start_time = time.time()
 
@@ -242,7 +234,8 @@ class Move(StoppableThread):
             self.pos = utils.denormalize_position(self.motor, self.pos)
 
         # Calculate the max velocity
-        current_pos = self.shimi.controller.get_present_position([self.motor])[0]
+        current_pos = self.shimi.controller.get_present_position([self.motor])[
+            0]
         max_vel = abs(current_pos - self.pos) / ((1 - change_time) * self.dur)
 
         # Set the goal position
@@ -259,7 +252,8 @@ class Move(StoppableThread):
             if t < (change_time * self.dur):
                 vel = max_vel
             else:
-                vel = max_vel * ((self.dur - t) / ((1 - change_time) * self.dur))
+                vel = max_vel * ((self.dur - t) /
+                                 ((1 - change_time) * self.dur))
 
             # Prevent vel == 0
             if vel < 1:
@@ -288,8 +282,18 @@ class Move(StoppableThread):
             self.stop_move()
 
     def pause_move(self, start_time):
+        """Pauses the currently running move.
+
+        Args:
+            start_time (float): The time at which the move was started.
+
+        Returns:
+            float: The updated start time to account for time paused.
+        """
+
         # Capture moving speed
-        pause_speed = abs(self.shimi.controller.get_present_speed([self.motor])[0])
+        pause_speed = abs(
+            self.shimi.controller.get_present_speed([self.motor])[0])
 
         # Stop the movement
         self.shimi.controller.set_goal_position(
@@ -309,6 +313,7 @@ class Move(StoppableThread):
         return start_time
 
     def stop_move(self):
+        """Stops the currently executing move."""
         self.shimi.controller.set_goal_position(
             {self.motor: self.shimi.controller.get_present_position([self.motor])[0]})
 
@@ -318,6 +323,7 @@ class Move(StoppableThread):
         self.durations = []
 
     def run(self):
+        """Actuates the motor in accordance with the specified parameters."""
         while len(self.positions) > 0:
             # Sleep for delay time
             time.sleep(self.delays.pop(0))
@@ -335,10 +341,34 @@ class Move(StoppableThread):
             self.vel_algo_map[self.vel_algo](**self.vel_algo_kwarg)
 
     def time_stats(self, start_time, duration):
+        """Prints the difference between how long the move actually took vs. how long it was supposed to take. 
+
+        Used for diagnostic purposes only. To be called upon completion of a Move.
+
+        Args:
+            start_time (float): Time in seconds when the Move began.
+            duration (float): Time in seconds the Move was supposed to take.
+        """
+
         time_taken = time.time() - start_time
-        print("duration: %.4f\ntime taken: %.4f\n difference: %.4f" % (duration, time_taken, duration - time_taken))
+        print("duration: %.4f\ntime taken: %.4f\n difference: %.4f" %
+              (duration, time_taken, duration - time_taken))
 
     def add_move(self, position, duration, vel_algo=None, vel_algo_kwarg={}, delay=0.0):
+        """Adds a new position, duration, and velocity parameters to the current Move sequence.
+
+        Args:
+            position (float): The position to move to.
+            duration (float): The duration the movement should last.
+            vel_algo (str, optional): Defaults to 'constant'. Defines the velocity algorithm to use for the move, out of the following:
+                'constant: constant velocity,
+                'linear_ad': constant acceleration to the midpoint of the movement, then constant deceleration to the end,
+                'linear_a': constant acceleration to a point, then constant velocity for the rest of the movement,
+                'linear_d': constant velocity to a point, then constant aceleration for the rest of the movement.
+            vel_algo_kwarg (dict, optional): Defaults to {}. Keyword arguments if needed for a velocity algorithm.
+            delay (float, optional): Defaults to 0.0. Time to wait before executing this movement from the end of the previous movement.
+        """
+
         self.delays.append(delay)
         self.positions.append(position)
         self.durations.append(duration)
@@ -355,14 +385,15 @@ class Move(StoppableThread):
             self.vel_algo_kwargs.append(self.vel_algo_kwargs[-1])
 
     def get_timestamps(self):
+        """Returns the timestamps of each sequenced movement."""
         if len(self.durations) == 0:
             return []
         else:
             return cumsum(self.durations)
 
 
-
 class Thinking(StoppableThread):
+    """Moves Shimi in a way to suggest Shimi is thinking about something."""
     def __init__(self, shimi, **kwargs):
         # Seed RNG
         random.seed()
@@ -420,12 +451,14 @@ class Thinking(StoppableThread):
 
             # Move to new state position
             # Take between 1.0 - 1.6 seconds
-            duration = 1.3 + ([-1, 1][random.randrange(2)] * random.random() * 0.3)
+            duration = 1.3 + ([-1, 1][random.randrange(2)] *
+                              random.random() * 0.3)
 
             moves = []
             for motor, pos in self.state_positions[self.state].items():
                 # Define the move
-                move = Move(self.shimi, motor, pos, duration, vel_algo='linear_ad', normalized_positions=True)
+                move = Move(self.shimi, motor, pos, duration,
+                            vel_algo='linear_ad', normalized_positions=True)
 
                 # Start moving
                 move.start()
@@ -439,6 +472,7 @@ class Thinking(StoppableThread):
 
 
 class No(StoppableThread):
+    """Shakes Shimi's head to express negation."""
     def __init__(self, shimi, **kwargs):
         self.shimi = shimi
 
@@ -480,6 +514,7 @@ class No(StoppableThread):
 
 
 class Alert(StoppableThread):
+    """Makes Shimi lean forward as to be alert or listening."""
     def __init__(self, shimi, **kwargs):
         self.shimi = shimi
 
@@ -491,16 +526,18 @@ class Alert(StoppableThread):
     def run(self):
         # Move forward and lift head up
         torso = Move(self.shimi, self.shimi.torso,
-                     normalize_position(self.shimi.torso, STARTING_POSITIONS[self.shimi.torso]) - 0.1,
+                     normalize_position(
+                         self.shimi.torso, STARTING_POSITIONS[self.shimi.torso]) - 0.1,
                      0.5,
                      vel_algo='constant',
                      normalized_positions=True)
 
         neck_ud = Move(self.shimi, self.shimi.neck_ud,
-                     normalize_position(self.shimi.neck_ud, STARTING_POSITIONS[self.shimi.neck_ud]) - 0.3,
-                     0.5,
-                     vel_algo='constant',
-                     normalized_positions=True)
+                       normalize_position(
+                           self.shimi.neck_ud, STARTING_POSITIONS[self.shimi.neck_ud]) - 0.3,
+                       0.5,
+                       vel_algo='constant',
+                       normalized_positions=True)
 
         torso.start()
         neck_ud.start()
@@ -511,5 +548,3 @@ class Alert(StoppableThread):
     def stop(self, wait=True):
         self.shimi.initial_position()
         super().stop(wait)
-
-
