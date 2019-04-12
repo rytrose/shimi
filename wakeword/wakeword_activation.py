@@ -1,5 +1,9 @@
+import os
+import sys
+
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
 import time
-from matt.SpeechRecognizer import SpeechRecognizer, SpeechRecognizerClient
+from wakeword.speech_recognizer import SpeechRecognizer, SpeechRecognizerClient
 from pypot.utils import StoppableThread
 from shimi import Shimi
 from audio.audio_demos import play_opera, play_outkast
@@ -97,7 +101,7 @@ class WakeWordClient:
         """Wraps on_phrase function, allowing allowing StoppableThread objects to be used as on_phrase.
 
         Also receives and passes along input audio data.
-        
+
         Args:
             audio_data (list): Raw PCM input audio data.
             sample_rate (int): Sample rate of recorded input audio.
