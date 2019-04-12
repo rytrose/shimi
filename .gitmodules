@@ -1,6 +1,3 @@
-[submodule "matt"]
-	path = matt
-	url = https://github.com/mjkaufer/nice-to-shimeet-you.git
 [submodule "shimiAudio"]
 	path = shimiAudio
 	url = https://github.gatech.edu/rsavery3/shimiAudio.git
