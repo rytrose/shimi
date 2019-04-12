@@ -1,3 +1,6 @@
 [submodule "shimiAudio"]
 	path = shimiAudio
 	url = https://github.gatech.edu/rsavery3/shimiAudio.git
+[submodule "wakeword/usb_4_mic_array"]
+	path = wakeword/usb_4_mic_array
+	url = https://github.com/respeaker/usb_4_mic_array.git
