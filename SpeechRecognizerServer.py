@@ -43,7 +43,6 @@ class SpeechRecognizerServer:
             mic_index (int, optional): Defaults to 2. Specifies the input device index to use.
             snowboy_configuration (tuple, optional): Defaults to None. The first argument should be the location of the Snowboy library, and the second should be a list of model files.
         """
-
         self.snowboy_configuration = snowboy_configuration
         if self.snowboy_configuration:
             self.snowboy_configuration = (

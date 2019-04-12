@@ -5,7 +5,7 @@ sys.path.insert(1, os.path.join(sys.path[0], 'shimiAudio'))
 from shimi import Shimi
 from motion.move import Alert
 from motion.generative_phrase import GenerativePhrase
-from wakeword.wakeword_activation import WakeWord, WakeWordClient
+from wakeword.wakeword_activation import WakeWordClient
 from audio.audio_demos import play_opera
 from wakeword.doa import DOA
 from demo import audio_response_demo
