@@ -32,6 +32,9 @@ class SpeechRecognizerServer:
     The fork allows for a callback function when hot word is detected, which is very useful for Shimi acknowledgement. It also has minor
     performance improvements.
 
+    It can installed with the following command:
+    sudo pip install git+https://github.com/rytrose/speech_recognition#egg=speech_recognition
+
     """
 
     def __init__(self, respeaker=True, mic_index=2, snowboy_configuration=None):
