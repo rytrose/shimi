@@ -5,6 +5,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from utils.utils import get_bit
 from audio.melody_extraction import MelodyExtraction
+from audio.pyo_client import PyoClient
 
 import pretty_midi as pm
 import numpy as np
@@ -127,19 +128,14 @@ class Singing:
         
 
         if init_pyo:
-            self.server = Server()
-            pa_list_devices()
-
             # Local testing
-            self.server = Server()
-            # if self.duplex:
-            #     self.server = Server(sr=16000, ichnls=4)
-            #     self.server.setInOutDevice(2)
-            # else:
-            #     self.server = Server(sr=16000, duplex=0)
-            #     self.server.setOutputDevice(2)
-            self.server.deactivateMidi()
-            self.server.boot().start()
+            # self.pyo_client = PyoClient()
+            if self.duplex:
+                self.pyo_client = PyoClient(sr=16000, ichnls=4, 
+                    input_device_id=2, output_device_id=2)
+            else:
+                self.pyo_client = PyoClient(sr=16000, audio_duplex=False, 
+                    audio_input_device_id=2, audio_output_device_id=2)
 
         """
         N.B. Phase Vocoder analysis is very CPU intensive, so to add various Shimi utterances is is necessary to
@@ -166,7 +162,7 @@ class Singing:
             self.path)
         self.song_length_in_samples = int(self.song_length_in_samples)
         self.song_sr = int(self.song_sr)
-        self.song_vol = 0.02
+        self.song_vol = 0.1
         self.song_sample = SfPlayer(self.path, mul=self.song_vol)
         self.vocal_filter = Biquadx(
             self.song_sample * (1 / self.song_vol), freq=800, q=0.75, type=2)
@@ -215,8 +211,6 @@ class Singing:
             self.speeds.append(float(speed))
             self.playback_start_indices.append(
                 (1 / self.num_utterances) * random.randint(0, 3))
-
-        print(self.playback_start_indices)
 
         self.define_singing_pattern()
 
