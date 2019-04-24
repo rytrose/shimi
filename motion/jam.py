@@ -48,6 +48,8 @@ class Jam(StoppableThread):
         self.neck_ud.join()
         self.neck_lr.join()
 
+        self.shimi.initial_position()
+
     def foot_move(self, energy):
         """Moves the foot up and down according to the tempo and potentially energy of the audio file.
 

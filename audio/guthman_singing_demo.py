@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from PyInquirer import prompt
-from webapp.webapp_controller import SingingProcessWrapper
+from audio.singing import SingingProcessWrapper
 from motion.jam import Jam
 from shimi import Shimi
 from librosa.core import load
@@ -44,7 +44,7 @@ song_info = {}
 
 def make_song_options():
     """Fetches the information and fills out a list of songs capable of being demoed."""
-    conn = sqlite3.connect('/media/nvidia/disk3/shimi_library.db')
+    conn = sqlite3.connect('/media/nvidia/disk4/shimi_library.db')
     c = conn.cursor()
     for msd_id in available_ids:
         c.execute(
@@ -156,7 +156,6 @@ if __name__ == '__main__':
 
             move.start()
             move.join()
-            shimi.initial_position()
 
         except KeyboardInterrupt:
             print("Exiting...")

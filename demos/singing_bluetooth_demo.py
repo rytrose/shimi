@@ -3,7 +3,11 @@ import os, sys
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from shimi import Shimi
 from communication.bluetooth_client import BluetoothClient
-from webapp.webapp_controller import SingingProcessWrapper
+from audio.singing import SingingProcessWrapper
+from motion.jam import Jam
+
+from librosa.core import load
+from librosa.beat import tempo as estimate_tempo
 import multiprocessing
 import threading
 import sqlite3
@@ -14,7 +18,7 @@ ALL_SONGS = 0
 PROCESSED_SONGS = 1
 QUERIED_SONGS = 2
 
-LOCAL_STORAGE_DIR = "/media/nvidia/disk3/singing_files"
+LOCAL_STORAGE_DIR = "/media/nvidia/disk4/singing_files"
 LOCAL_AUDIO_DIR = op.join(LOCAL_STORAGE_DIR, "audio")
 LOCAL_CNN_DIR = op.join(LOCAL_STORAGE_DIR, "cnn_outputs")
 LOCAL_MELODIA_DIR = op.join(LOCAL_STORAGE_DIR, "melodia_outputs")
@@ -23,6 +27,7 @@ LOCAL_MELODIA_DIR = op.join(LOCAL_STORAGE_DIR, "melodia_outputs")
 class SingingBluetoothDemo:
     def __init__(self):
         self.shimi = Shimi()
+        self.move = None
 
         self.bluetooth_client = BluetoothClient()
         self.bluetooth_client.map("fetch_songs", self.on_fetch_songs)
@@ -34,17 +39,12 @@ class SingingBluetoothDemo:
         self.singing_process = SingingProcessWrapper(self.singing_server_pipe)
         self.singing_process.start()
 
-        self.db_path = '/media/nvidia/disk3/shimi_library.db'
+        self.db_path = '/media/nvidia/disk4/shimi_library.db'
 
     def fetch_all_songs(self, num_results, offset):
         count_query = "select count(msd_id) from songs where processed=1"
         query = "select msd_id, title, artist_name, release, processed from songs where processed=1 order by title asc limit ? offset ?"
         self.fetch_songs(count_query, query, [num_results, offset])
-
-    # def fetch_processed_songs(self, num_results, offset):
-    #     count_query = "select count(msd_id) from songs where processed=1"
-    #     query = "select msd_id, title, artist_name, release, processed from songs where processed=1 order by title asc limit ? offset ?"
-    #     self.fetch_songs(count_query, query, [num_results, offset])
 
     def fetch_queried_songs(self, search_query, num_results, offset):
         count_query = "select count(msd_id) from songs where (title like '%'|| ? || '%' or artist_name like '%'|| ? || '%' or release like '%'|| ? || '%') and processed=1"
@@ -113,9 +113,15 @@ class SingingBluetoothDemo:
                 "analysis_file": op.join(LOCAL_CNN_DIR, "cnn_" + msd_id + ".txt")
             }
 
+        y, sr = load(op.join(LOCAL_AUDIO_DIR, msd_id + ".wav"))
+        length = y.shape[0] / sr
+        tempo = 60 / float(estimate_tempo(y, sr))
+        self.move = Jam(self.shimi, tempo, length)
+
         self.singing_client_pipe.send(singing_opts)
         res = self.singing_client_pipe.recv()
-        print(res)
+        self.move.start()
+
 
     def on_process(self, message):
         msd_id = message["msd_id"]

@@ -22,6 +22,7 @@ import argparse
 import pickle
 import markovify
 import json
+import multiprocessing
 
 
 class PVSample:
@@ -330,6 +331,7 @@ class Singing:
     def say_word(self):
         word = self.phoneme_model.make_sentence()
         print(word)
+        time.sleep(3.0)
         word_list = word.split(' ')
         
         for i, phoneme in enumerate(word_list):
@@ -411,6 +413,27 @@ class Singing:
 
         self.singing_sample = SfPlayer(midi_wav_path)
         self.singing_sample.out()
+
+
+class SingingProcessWrapper(multiprocessing.Process):
+    def __init__(self, connection):
+        super(SingingProcessWrapper, self).__init__()
+        self.daemon = False
+        self._connection = connection
+        self._terminated = False
+
+    def run(self):
+        self.singing = Singing(init_pyo=True)
+
+        while not self._terminated:
+            args = self._connection.recv()
+            try:
+                self.singing.sing_audio(args["audio_file"], args["extraction_type"], args["analysis_file"], starting_callback=lambda: self._connection.send("started"))
+            except Exception as e:
+                self._connection.send(e)
+
+    def stop(self):
+        self._terminated = True
 
 
 if __name__ == '__main__':

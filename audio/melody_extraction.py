@@ -99,7 +99,7 @@ class MelodyExtraction:
                                                                                        self.melodia_timestamps)
 
     def process_data(self, melody_data, timestamps, fix_octaves=True, smooth_false_negatives=True,
-                     remove_false_positives=True, remove_spikes=True):
+                     remove_false_positives=True, remove_spikes=True, clamp_range=True):
         """Post-process output of melody extraction model to fix errors
 
         Args:
@@ -231,6 +231,19 @@ class MelodyExtraction:
 
             print("Removed %d spikes." % num_spikes)
 
+        if clamp_range:
+            range_min = 330
+            range_max = 880
+
+            for i, freq in enumerate(melody_data):
+                if freq > 10:
+                    while freq < range_min or freq > range_max:
+                        if freq < range_min:
+                            freq = freq * 2
+                        else:
+                            freq = freq / 2
+                    melody_data[i] = freq
+
         if fix_octaves:
             notes = []
             start_idx = 0
@@ -325,6 +338,8 @@ class MelodyExtraction:
             print("Raised %d points an octave." % points_raised)
             print("Dropped %d notes an octave." % notes_dropped)
             print("Raised %d notes an octave." % notes_raised)
+
+        # import pdb; pdb.set_trace()
 
         notes = []
         start_idx = 0
