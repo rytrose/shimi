@@ -32,6 +32,7 @@ class SingingBluetoothDemo:
         self.bluetooth_client = BluetoothClient()
         self.bluetooth_client.map("fetch_songs", self.on_fetch_songs)
         self.bluetooth_client.map("sing", self.on_sing)
+        self.bluetooth_client.map("stop", self.on_stop)
         self.bluetooth_client.map("process", self.on_process)
         threading.Thread(target=self.bluetooth_client.connect).start()
 
@@ -94,6 +95,15 @@ class SingingBluetoothDemo:
             self.fetch_queried_songs(search_query, num_results, offset)
 
     def on_sing(self, message):
+        if self.move:  # Make sure no movement is happening
+            self.move.stop()
+            self.shimi.initial_position()
+        
+        self.singing_client_pipe.send({  # Make sure no other audio is playing
+            "command": "stop"
+        })
+        res = self.singing_client_pipe.recv()
+
         msd_id = message["msd_id"]
         extraction_type = message["extraction_type"]
         print("Prepping to sing %s..." % msd_id)
@@ -101,6 +111,7 @@ class SingingBluetoothDemo:
         # Get melody extraction file
         if extraction_type == "melodia":
             singing_opts = {
+                "command": "start",
                 "audio_file": op.join(LOCAL_AUDIO_DIR, msd_id + ".wav"),
                 "extraction_type": "melodia",
                 "analysis_file": op.join(LOCAL_MELODIA_DIR, "melodia_" + msd_id + ".p")
@@ -108,6 +119,7 @@ class SingingBluetoothDemo:
 
         else:
             singing_opts = {
+                "command": "start",
                 "audio_file": op.join(LOCAL_AUDIO_DIR, msd_id + ".wav"),
                 "extraction_type": "cnn",
                 "analysis_file": op.join(LOCAL_CNN_DIR, "cnn_" + msd_id + ".txt")
@@ -122,6 +134,15 @@ class SingingBluetoothDemo:
         res = self.singing_client_pipe.recv()
         self.move.start()
 
+    def on_stop(self, message):
+        if self.move:  # Make sure no movement is happening
+            self.move.stop()
+            self.shimi.initial_position()
+        
+        self.singing_client_pipe.send({  # Make sure no other audio is playing
+            "command": "stop"
+        })
+        res = self.singing_client_pipe.recv()
 
     def on_process(self, message):
         msd_id = message["msd_id"]

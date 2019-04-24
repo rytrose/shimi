@@ -50,6 +50,13 @@ class Jam(StoppableThread):
 
         self.shimi.initial_position()
 
+    def stop(self):
+        """Stops the gesture."""
+        self.foot.stop()
+        self.torso.stop()
+        self.neck_ud.stop()
+        self.neck_lr.stop()
+
     def foot_move(self, energy):
         """Moves the foot up and down according to the tempo and potentially energy of the audio file.
 
@@ -201,3 +208,4 @@ class Jam(StoppableThread):
             t += delay + dur
 
         return neck_lr
+

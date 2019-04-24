@@ -127,6 +127,9 @@ class Singing:
         self.resource_path = resource_path
         self.playing = False
         
+        self.shimi_sample = None
+        self.song_sample = None
+        self.frequency_setter = None
 
         if init_pyo:
             # Local testing
@@ -280,6 +283,14 @@ class Singing:
         if blocking:
             while self.playing:
                 pass
+    
+    def stop_audio(self):
+        if self.shimi_sample:
+            self.shimi_sample.stop()
+        if self.song_sample:
+            self.song_sample.stop()
+        if self.frequency_setter:
+            self.frequency_setter.stop()
 
     def define_singing_pattern(self):
         # The function self.set_freq is called every self.frequency_timestep seconds as a result of this Pattern object
@@ -428,7 +439,11 @@ class SingingProcessWrapper(multiprocessing.Process):
         while not self._terminated:
             args = self._connection.recv()
             try:
-                self.singing.sing_audio(args["audio_file"], args["extraction_type"], args["analysis_file"], starting_callback=lambda: self._connection.send("started"))
+                if args["command"] == "start":
+                    self.singing.sing_audio(args["audio_file"], args["extraction_type"], args["analysis_file"], starting_callback=lambda: self._connection.send("started"))
+                elif args["command"] == "stop":
+                    self.singing.stop_audio()
+                    self._connection.send("stopped")
             except Exception as e:
                 self._connection.send(e)
 
