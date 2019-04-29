@@ -106,7 +106,7 @@ class PVSample:
 
 
 class Singing:
-    def __init__(self, init_pyo=False, duplex=False, resource_path="/home/nvidia/shimi/audio", phoneme_style=False):
+    def __init__(self, init_pyo=False, duplex=False, resource_path="/home/nvidia/shimi/audio", phoneme_style=False, debug=False):
         """Initializes audio server if needed and establishes resource path.
 
         Args:
@@ -132,14 +132,15 @@ class Singing:
         self.frequency_setter = None
 
         if init_pyo:
-            # Local testing
-            # self.pyo_client = PyoClient()
-            if self.duplex:
-                self.pyo_client = PyoClient(sr=16000, ichnls=4, 
-                    input_device_id=2, output_device_id=2)
+            if debug:  # Local testing
+                self.pyo_client = PyoClient()
             else:
-                self.pyo_client = PyoClient(sr=16000, audio_duplex=False, 
-                    audio_input_device_id=2, audio_output_device_id=2)
+                if self.duplex:
+                    self.pyo_client = PyoClient(sr=16000, ichnls=4, 
+                        input_device_id=2, output_device_id=2)
+                else:
+                    self.pyo_client = PyoClient(sr=16000, audio_duplex=False, 
+                        audio_input_device_id=2, audio_output_device_id=2)
 
         """
         N.B. Phase Vocoder analysis is very CPU intensive, so to add various Shimi utterances is is necessary to
@@ -454,6 +455,7 @@ class SingingProcessWrapper(multiprocessing.Process):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--pyo", action="store_true", default=False)
+    parser.add_argument("-d", "--debug", action="store_true", default=False)
     parser.add_argument("-r", "--resource_path", type=str, default=os.getcwd())
     args = parser.parse_args()
-    s = Singing(init_pyo=args.pyo, resource_path=args.resource_path, phoneme_style=False)
+    s = Singing(init_pyo=args.pyo, resource_path=args.resource_path, phoneme_style=False, debug=args.debug)

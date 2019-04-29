@@ -231,19 +231,6 @@ class MelodyExtraction:
 
             print("Removed %d spikes." % num_spikes)
 
-        if clamp_range:
-            range_min = 330
-            range_max = 880
-
-            for i, freq in enumerate(melody_data):
-                if freq > 10:
-                    while freq < range_min or freq > range_max:
-                        if freq < range_min:
-                            freq = freq * 2
-                        else:
-                            freq = freq / 2
-                    melody_data[i] = freq
-
         if fix_octaves:
             notes = []
             start_idx = 0
@@ -339,7 +326,41 @@ class MelodyExtraction:
             print("Dropped %d notes an octave." % notes_dropped)
             print("Raised %d notes an octave." % notes_raised)
 
-        # import pdb; pdb.set_trace()
+        if clamp_range:
+            range_min = 330
+            range_max = 880
+            buffer = 50
+            look_distance = 20
+            outside_indices = []
+            indices_to_clamp = []
+
+            for i, freq in enumerate(melody_data):  # Mark all notes outside of range
+                if freq > 10:
+                    if freq < range_min or freq > range_max:
+                        outside_indices.append(i)
+
+            for outside_index in outside_indices:
+                freq = melody_data[i]
+                if freq < range_min - buffer or freq > range_max + buffer:  # If out of buffer area, definitely clamp
+                    indices_to_clamp.append(outside_index)
+                else:  # If in buffer area, consider neighbors
+                    for i in range(outside_index - look_distance, outside_index + look_distance + 1):
+                        if i >= 0 and i < len(melody_data) and i != outside_index:
+                            freq = melody_data[i]
+                            if freq < range_min - buffer or freq > range_max + buffer:  # If neighbors aren't in buffered range, then clamp 
+                                indices_to_clamp.append(outside_index)    
+                                break
+            
+            for i in indices_to_clamp:
+                freq = melody_data[i]
+                while freq < range_min or freq > range_max:
+                    if freq < range_min:
+                        freq = freq * 2
+                    else:
+                        freq = freq / 2
+                melody_data[i] = freq
+
+            print("Clamped %d notes." % len(indices_to_clamp))
 
         notes = []
         start_idx = 0
