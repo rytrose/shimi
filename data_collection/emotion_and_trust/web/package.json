@@ -13,7 +13,7 @@
   "author": "Ryan Rose",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.16.4",
+    "express": "^4.18.2",
     "osc": "^2.2.4"
   }
 }
